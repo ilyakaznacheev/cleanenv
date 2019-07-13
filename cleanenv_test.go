@@ -7,17 +7,23 @@ import (
 )
 
 func TestReadEnvVars(t *testing.T) {
-	type testStruct struct {
-		number int `env:"TEST" default:"1"`
+	type Combined struct {
+		Empty   int
+		Default int `env:"TEST0" default:"1"`
+		Global  int `env:"TEST1" default:"1"`
+		local   int `env:"TEST2" default:"1"`
 	}
 
-	type testStructExp struct {
-		Number int `env:"TEST" default:"1"`
-	}
-
-	type testStructComb struct {
-		Number int `env:"TEST1" default:"1"`
-		number int `env:"TEST2" default:"1"`
+	type AllTypes struct {
+		Integer         int64             `env:"TEST_INTEGER"`
+		UnsInteger      uint64            `env:"TEST_UNSINTEGER"`
+		Float           float64           `env:"TEST_FLOAT"`
+		Boolean         bool              `env:"TEST_BOOLEAN"`
+		String          string            `env:"TEST_STRING"`
+		ArrayInt        []int             `env:"TEST_ARRAYINT"`
+		ArrayString     []string          `env:"TEST_ARRAYSTRING"`
+		MapStringInt    map[string]int    `env:"TEST_MAPSTRINGINT"`
+		MapStringString map[string]string `env:"TEST_MAPSTRINGSTRING"`
 	}
 
 	tests := []struct {
@@ -28,39 +34,53 @@ func TestReadEnvVars(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "unexported",
-			env: map[string]string{
-				"TEST": "2",
-			},
-			cfg: &testStruct{},
-			want: &testStruct{
-				number: 0,
-			},
-			wantErr: false,
-		},
-
-		{
-			name: "exported",
-			env: map[string]string{
-				"TEST": "2",
-			},
-			cfg: &testStructExp{},
-			want: &testStructExp{
-				Number: 2,
-			},
-			wantErr: false,
-		},
-
-		{
 			name: "combined",
 			env: map[string]string{
 				"TEST1": "2",
-				"TEST2": "2",
+				"TEST2": "3",
 			},
-			cfg: &testStructComb{},
-			want: &testStructComb{
-				number: 0,
-				Number: 2,
+			cfg: &Combined{},
+			want: &Combined{
+				Empty:   0,
+				Default: 1,
+				Global:  2,
+				local:   0,
+			},
+			wantErr: false,
+		},
+
+		{
+			name: "all types",
+			env: map[string]string{
+				"TEST_INTEGER":         "-5",
+				"TEST_UNSINTEGER":      "5",
+				"TEST_FLOAT":           "5.5",
+				"TEST_BOOLEAN":         "true",
+				"TEST_STRING":          "test",
+				"TEST_ARRAYINT":        "1,2,3",
+				"TEST_ARRAYSTRING":     "a,b,c",
+				"TEST_MAPSTRINGINT":    "a:1,b:2,c:3",
+				"TEST_MAPSTRINGSTRING": "a:x,b:y,c:z",
+			},
+			cfg: &AllTypes{},
+			want: &AllTypes{
+				Integer:     -5,
+				UnsInteger:  5,
+				Float:       5.5,
+				Boolean:     true,
+				String:      "test",
+				ArrayInt:    []int{1, 2, 3},
+				ArrayString: []string{"a", "b", "c"},
+				MapStringInt: map[string]int{
+					"a": 1,
+					"b": 2,
+					"c": 3,
+				},
+				MapStringString: map[string]string{
+					"a": "x",
+					"b": "y",
+					"c": "z",
+				},
 			},
 			wantErr: false,
 		},

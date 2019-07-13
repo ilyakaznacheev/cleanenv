@@ -275,6 +275,8 @@ func parseValue(field reflect.Value, value, sep string) error {
 			}
 		}
 
+		field.Set(mapValue)
+
 	default:
 		return fmt.Errorf("unsupported type %s.%s", valueType.PkgPath(), valueType.Name())
 	}
