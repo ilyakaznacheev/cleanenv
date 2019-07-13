@@ -10,7 +10,7 @@ You can just prepare config structure and fill it from the config file and envir
 
 	var cfg Config
 
-	ReadConfig("config.yml", &Config)
+	ReadConfig("config.yml", &cfg)
 */
 package cleanenv
 
