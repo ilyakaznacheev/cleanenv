@@ -1,0 +1,26 @@
+language: go
+
+go:
+  - 1.11.x
+  - 1.12.x
+  - tip
+
+os:
+  - linux
+  - osx
+
+matrix:
+  allow_failures:
+    - go: tip
+
+env:
+  - GO111MODULE=on
+
+before_install:
+  - go get 
+
+script:
+  - make test-coverage
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)

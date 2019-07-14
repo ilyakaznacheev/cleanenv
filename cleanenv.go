@@ -4,8 +4,8 @@ Package cleanenv gives you a single tool to read application configuration from 
 You can just prepare config structure and fill it from the config file and environment variables.
 
 	type Config struct {
-		Port string `yml:"port" env:"PORT" default:"8080"`
-		Host string `yml:"host" env:"HOST" default:"localhost"`
+		Port string `yml:"port" env:"PORT" env-default:"8080"`
+		Host string `yml:"host" env:"HOST" env-default:"localhost"`
 	}
 
 	var cfg Config
@@ -31,14 +31,29 @@ import (
 )
 
 var (
+	// ErrInconsistentType is a type inconsistency error
 	ErrInconsistentType = errors.New("error during parsing config structure metadata")
 )
 
 const (
+	// DefaultSeparator is a defauld list and map separator character
 	DefaultSeparator = ","
 )
 
-type CustomSetter interface {
+// Setter is an interface for a custom value setter.
+//
+// To implement a custom value setter you need to add a SetValue function to your type that will receive a string raw value:
+//
+// 	type MyField string
+//
+// 	func (f MyField) SetValue(s string) error  {
+// 		if s == "" {
+// 			return fmt.Errorf("field value can't be empty")
+// 		}
+// 		f = MyField("my field is: "+ s)
+// 		return nil
+// 	}
+type Setter interface {
 	SetValue(string) error
 }
 
@@ -210,7 +225,7 @@ func readEnvVars(cfg interface{}, update bool) error {
 func parseValue(field reflect.Value, value, sep string) error {
 
 	if field.CanInterface() {
-		if cs, ok := field.Interface().(CustomSetter); ok {
+		if cs, ok := field.Interface().(Setter); ok {
 			return cs.SetValue(value)
 		}
 	}
