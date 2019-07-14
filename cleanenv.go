@@ -50,7 +50,19 @@ func ReadConfig(path string, cfg interface{}) error {
 		return err
 	}
 
-	return readEnvVars(cfg)
+	return readEnvVars(cfg, false)
+}
+
+// ReadEnv reads environment variables into the structure.
+func ReadEnv(cfg interface{}) error {
+	return readEnvVars(cfg, false)
+}
+
+// UpdateEnv rereads (updates) environment variables in the structure.
+//
+// To mark the field as updatable provide the tag "upd"
+func UpdateEnv(cfg interface{}) error {
+	return readEnvVars(cfg, true)
 }
 
 func parseFile(path string, cfg interface{}) error {
@@ -94,12 +106,12 @@ func parseTOML(r io.Reader, str interface{}) error {
 }
 
 type structMeta struct {
-	envList []string
-	// fieldType   reflect.Type
+	envList     []string
 	fieldValue  reflect.Value
 	defValue    *string
 	separator   string
 	description string
+	updatable   bool
 }
 
 func readStructMetadata(cfg interface{}) ([]structMeta, error) {
@@ -130,31 +142,30 @@ func readStructMetadata(cfg interface{}) ([]structMeta, error) {
 				separator string
 			)
 
-			// if unicode.IsLower([]rune(fType.Name)[0]) {
-			// 	// unexported field
-			// 	continue
-			// }
+			// check is the field value can be changed
 			if !s.Field(idx).CanSet() {
 				continue
 			}
 
-			if def, ok := fType.Tag.Lookup("default"); ok {
+			if def, ok := fType.Tag.Lookup("env-default"); ok {
 				defValue = &def
 			}
 
-			if sep, ok := fType.Tag.Lookup("separator"); ok {
+			if sep, ok := fType.Tag.Lookup("env-separator"); ok {
 				separator = sep
 			} else {
 				separator = DefaultSeparator
 			}
 
+			_, upd := fType.Tag.Lookup("env-upd")
+
 			metas = append(metas, structMeta{
-				envList: strings.Split(envName, DefaultSeparator),
-				// fieldType:   typeInfo,
+				envList:     strings.Split(envName, DefaultSeparator),
 				fieldValue:  s.Field(idx),
 				defValue:    defValue,
 				separator:   separator,
-				description: fType.Tag.Get("descr"),
+				description: fType.Tag.Get("env-description"),
+				updatable:   upd,
 			})
 		}
 	}
@@ -162,13 +173,18 @@ func readStructMetadata(cfg interface{}) ([]structMeta, error) {
 	return metas, nil
 }
 
-func readEnvVars(cfg interface{}) error {
+func readEnvVars(cfg interface{}, update bool) error {
 	metaInfo, err := readStructMetadata(cfg)
 	if err != nil {
 		return err
 	}
 
 	for _, meta := range metaInfo {
+		// update only updatable fields
+		if update && !meta.updatable {
+			continue
+		}
+
 		var rawValue string
 		if meta.defValue != nil {
 			rawValue = *meta.defValue

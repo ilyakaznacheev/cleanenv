@@ -11,9 +11,9 @@ import (
 func TestReadEnvVars(t *testing.T) {
 	type Combined struct {
 		Empty   int
-		Default int `env:"TEST0" default:"1"`
-		Global  int `env:"TEST1" default:"1"`
-		local   int `env:"TEST2" default:"1"`
+		Default int `env:"TEST0" env-default:"1"`
+		Global  int `env:"TEST1" env-default:"1"`
+		local   int `env:"TEST2" env-default:"1"`
 	}
 
 	type AllTypes struct {
@@ -95,7 +95,7 @@ func TestReadEnvVars(t *testing.T) {
 			}
 			defer os.Clearenv()
 
-			if err := readEnvVars(tt.cfg); (err != nil) != tt.wantErr {
+			if err := readEnvVars(tt.cfg, false); (err != nil) != tt.wantErr {
 				t.Errorf("wrong error behavior %v, wantErr %v", err, tt.wantErr)
 			}
 			if !reflect.DeepEqual(tt.cfg, tt.want) {
