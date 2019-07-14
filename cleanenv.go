@@ -26,6 +26,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/BurntSushi/toml"
 	"gopkg.in/yaml.v2"
 )
 
@@ -44,6 +45,15 @@ type CustomSetter interface {
 // ReadConfig reads configuration file and parses it depending on tags in structure provided.
 // Then it reads and parses
 func ReadConfig(path string, cfg interface{}) error {
+	err := parseFile(path, cfg)
+	if err != nil {
+		return err
+	}
+
+	return readEnvVars(cfg)
+}
+
+func parseFile(path string, cfg interface{}) error {
 	// read the configuration file
 	f, err := os.OpenFile(path, os.O_RDONLY|os.O_SYNC, 0)
 	if err != nil {
@@ -53,18 +63,19 @@ func ReadConfig(path string, cfg interface{}) error {
 
 	// parse the file depending on the file type
 	switch ext := strings.ToLower(filepath.Ext(path)); ext {
-	case "yaml", "yml":
+	case ".yaml", ".yml":
 		err = parseYAML(f, cfg)
-	case "json":
-		err = parseYAML(f, cfg)
+	case ".json":
+		err = parseJSON(f, cfg)
+	case ".toml":
+		err = parseTOML(f, cfg)
 	default:
-		return fmt.Errorf("file format %s doesn't supported by the parser", ext)
+		return fmt.Errorf("file format '%s' doesn't supported by the parser", ext)
 	}
 	if err != nil {
 		return fmt.Errorf("config file parsing error: %s", err.Error())
 	}
-
-	return readEnvVars(cfg)
+	return nil
 }
 
 // parseYAML parses YAML from reader to data structure
@@ -75,6 +86,11 @@ func parseYAML(r io.Reader, str interface{}) error {
 // parseJSON parses JSON from reader to data structure
 func parseJSON(r io.Reader, str interface{}) error {
 	return json.NewDecoder(r).Decode(str)
+}
+
+func parseTOML(r io.Reader, str interface{}) error {
+	_, err := toml.DecodeReader(r, str)
+	return err
 }
 
 type structMeta struct {
