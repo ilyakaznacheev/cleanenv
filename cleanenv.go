@@ -57,6 +57,11 @@ type Setter interface {
 	SetValue(string) error
 }
 
+// Updater gives an ability to implement custom update function for a field or a whole structure
+type Updater interface {
+	Update() error
+}
+
 // ReadConfig reads configuration file and parses it depending on tags in structure provided.
 // Then it reads and parses
 func ReadConfig(path string, cfg interface{}) error {
@@ -150,39 +155,36 @@ func readStructMetadata(cfg interface{}) ([]structMeta, error) {
 	for idx := 0; idx < s.NumField(); idx++ {
 		fType := typeInfo.Field(idx)
 
-		// don't process the field if it hasn't explicit environment variable name
-		if envName, ok := fType.Tag.Lookup("env"); ok {
-			var (
-				defValue  *string
-				separator string
-			)
+		var (
+			defValue  *string
+			separator string
+		)
 
-			// check is the field value can be changed
-			if !s.Field(idx).CanSet() {
-				continue
-			}
-
-			if def, ok := fType.Tag.Lookup("env-default"); ok {
-				defValue = &def
-			}
-
-			if sep, ok := fType.Tag.Lookup("env-separator"); ok {
-				separator = sep
-			} else {
-				separator = DefaultSeparator
-			}
-
-			_, upd := fType.Tag.Lookup("env-upd")
-
-			metas = append(metas, structMeta{
-				envList:     strings.Split(envName, DefaultSeparator),
-				fieldValue:  s.Field(idx),
-				defValue:    defValue,
-				separator:   separator,
-				description: fType.Tag.Get("env-description"),
-				updatable:   upd,
-			})
+		// check is the field value can be changed
+		if !s.Field(idx).CanSet() {
+			continue
 		}
+
+		if def, ok := fType.Tag.Lookup("env-default"); ok {
+			defValue = &def
+		}
+
+		if sep, ok := fType.Tag.Lookup("env-separator"); ok {
+			separator = sep
+		} else {
+			separator = DefaultSeparator
+		}
+
+		_, upd := fType.Tag.Lookup("env-upd")
+
+		metas = append(metas, structMeta{
+			envList:     strings.Split(fType.Tag.Get("env"), DefaultSeparator),
+			fieldValue:  s.Field(idx),
+			defValue:    defValue,
+			separator:   separator,
+			description: fType.Tag.Get("env-description"),
+			updatable:   upd,
+		})
 	}
 
 	return metas, nil
@@ -194,25 +196,32 @@ func readEnvVars(cfg interface{}, update bool) error {
 		return err
 	}
 
+	if updater, ok := cfg.(Updater); ok {
+		if err := updater.Update(); err != nil {
+			return err
+		}
+	}
+
 	for _, meta := range metaInfo {
 		// update only updatable fields
 		if update && !meta.updatable {
 			continue
 		}
 
-		var rawValue string
-		if meta.defValue != nil {
-			rawValue = *meta.defValue
-		}
+		rawValue := meta.defValue
 
 		for _, env := range meta.envList {
 			if value, ok := os.LookupEnv(env); ok {
-				rawValue = value
+				rawValue = &value
 				break
 			}
 		}
 
-		if err := parseValue(meta.fieldValue, rawValue, meta.separator); err != nil {
+		if rawValue == nil {
+			continue
+		}
+
+		if err := parseValue(meta.fieldValue, *rawValue, meta.separator); err != nil {
 			return err
 		}
 	}

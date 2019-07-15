@@ -14,6 +14,12 @@ This is a simple configuration reading tool. It just does the following:
 - reads and parses configuration structure from the file
 - reads and overwrites configuration structure from environment variables
 
+## Roadmap
+
+- [ ] Description
+- [ ] Setters
+- [ ] Custom update handlers
+
 ## Installation
 
 To install the package run
@@ -105,13 +111,67 @@ cleanenv.ReadEnv(&cfg)
 
 // ... some actions in-between
 
-err := cleanenv.ReadEnv(&cfg)
+err := cleanenv.UpdateEnv(&cfg)
 if err != nil {
     ...
 }
 ```
 
 Here remote host and port may change in a distributed system architecture. Fields `cfg.Port` and `cfg.Host` can be updated in the runtime from corresponding environment variables. You can update them before the remote service call. Field `cfg.UserName` will not be changed after the initial read, though.
+
+## Model Format
+
+Library uses tags to configure model of configuration structure. There are following tags:
+
+- `env="<name>"` - environment variable name (e.g. `env="PORT"`);
+- `env-upd` - flag to mark a field as updatable. Run `UpdateEnv(&cfg)` to refresh updatable variables from environment;
+- `env-default="<value>"` - default value. If the field wasn't filled from the environment variable default value will be used instead$
+- `env-separator="<value>"` - custom list and map separator. If not set, the default separator `,` will be used;
+- `env-description="<value>"` - environment variable description.
+
+## Custom functions
+
+To enhance package abilities you can use some custom functions.
+
+### Custom Value Setter
+
+To make custom type allows to set the value from the environment variable, you need to implement the `Setter` interface on the field level:
+
+```go
+type MyField string
+
+func (f MyField) SetValue(s string) error  {
+	if s == "" {
+		return fmt.Errorf("field value can't be empty")
+	}
+	f = MyField("my field is: "+ s)
+	return nil
+}
+
+type Config struct {
+    Field MyField `env="MY_VALUE"`
+}
+```
+
+`SetValue` method should implement conversion logic from string to custom type.
+
+### Custom Value Update
+
+You may need to execute some custom field update logic, e.g. for remote config load.
+
+Thus, you need to implement the `Updater` interface on the structure level:
+
+```go
+type Config struct {
+	Field string
+}
+
+func (c *Config) Update() error {
+    newField, err := SomeCustomUpdate()
+    f.Field = newField
+	return err
+}
+```
 
 ## Supported file formats
 

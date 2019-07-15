@@ -105,6 +105,76 @@ func TestReadEnvVars(t *testing.T) {
 	}
 }
 
+type testConfigUpdateFunction struct {
+	One   string
+	Two   string
+	Three string
+}
+
+func (f *testConfigUpdateFunction) Update() error {
+	f.One = "upd1:" + f.One
+	f.Two = "upd2:" + f.Two
+	f.Three = "upd3:" + f.Three
+	return nil
+}
+
+type testConfigUpdateNoFunction struct {
+	One   string
+	Two   string
+	Three string
+}
+
+func TestReadUpdateFunctions(t *testing.T) {
+
+	tests := []struct {
+		name    string
+		cfg     interface{}
+		want    interface{}
+		wantErr bool
+	}{
+		{
+			name: "update structure with function",
+			cfg: &testConfigUpdateFunction{
+				One:   "test1",
+				Two:   "test2",
+				Three: "test3",
+			},
+			want: &testConfigUpdateFunction{
+				One:   "upd1:test1",
+				Two:   "upd2:test2",
+				Three: "upd3:test3",
+			},
+			wantErr: false,
+		},
+
+		{
+			name: "no update",
+			cfg: &testConfigUpdateNoFunction{
+				One:   "test1",
+				Two:   "test2",
+				Three: "test3",
+			},
+			want: &testConfigUpdateNoFunction{
+				One:   "test1",
+				Two:   "test2",
+				Three: "test3",
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := readEnvVars(tt.cfg, false); (err != nil) != tt.wantErr {
+				t.Errorf("wrong error behavior %v, wantErr %v", err, tt.wantErr)
+			}
+			if !reflect.DeepEqual(tt.cfg, tt.want) {
+				t.Errorf("wrong data %v, want %v", tt.cfg, tt.want)
+			}
+		})
+	}
+}
+
 func TestParseFile(t *testing.T) {
 	type configObject struct {
 		One int `yaml:"one" json:"one" toml:"one"`
