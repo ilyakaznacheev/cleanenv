@@ -6,9 +6,15 @@ import (
 	"os"
 	"reflect"
 	"testing"
+	"time"
 )
 
 func TestReadEnvVars(t *testing.T) {
+	durationFunc := func(s string) time.Duration {
+		d, _ := time.ParseDuration(s)
+		return d
+	}
+
 	type Combined struct {
 		Empty   int
 		Default int `env:"TEST0" env-default:"1"`
@@ -22,6 +28,7 @@ func TestReadEnvVars(t *testing.T) {
 		Float           float64           `env:"TEST_FLOAT"`
 		Boolean         bool              `env:"TEST_BOOLEAN"`
 		String          string            `env:"TEST_STRING"`
+		Duration        time.Duration     `env:"TEST_DURATION"`
 		ArrayInt        []int             `env:"TEST_ARRAYINT"`
 		ArrayString     []string          `env:"TEST_ARRAYSTRING"`
 		MapStringInt    map[string]int    `env:"TEST_MAPSTRINGINT"`
@@ -59,6 +66,7 @@ func TestReadEnvVars(t *testing.T) {
 				"TEST_FLOAT":           "5.5",
 				"TEST_BOOLEAN":         "true",
 				"TEST_STRING":          "test",
+				"TEST_DURATION":        "1h5m10s",
 				"TEST_ARRAYINT":        "1,2,3",
 				"TEST_ARRAYSTRING":     "a,b,c",
 				"TEST_MAPSTRINGINT":    "a:1,b:2,c:3",
@@ -71,6 +79,7 @@ func TestReadEnvVars(t *testing.T) {
 				Float:       5.5,
 				Boolean:     true,
 				String:      "test",
+				Duration:    durationFunc("1h5m10s"),
 				ArrayInt:    []int{1, 2, 3},
 				ArrayString: []string{"a", "b", "c"},
 				MapStringInt: map[string]int{
@@ -215,10 +224,7 @@ boolean: yes
 object:
   one: 1
   two: 2
-array:
-  - 1
-  - 2
-  - 3`,
+array: [1, 2, 3]`,
 			ext:     "yaml",
 			want:    &wantConfig,
 			wantErr: false,
@@ -296,6 +302,102 @@ two = 2`,
 			}
 			if err == nil && !reflect.DeepEqual(&cfg, tt.want) {
 				t.Errorf("wrong data %v, want %v", &cfg, tt.want)
+			}
+		})
+	}
+}
+
+func TestGetDescription(t *testing.T) {
+	type testSingleEnv struct {
+		One   int `env:"ONE" env-description:"one"`
+		Two   int `env:"TWO" env-description:"two"`
+		Three int `env:"THREE" env-description:"three"`
+	}
+
+	type testSeveralEnv struct {
+		One int `env:"ONE,ENO" env-description:"one"`
+		Two int `env:"TWO,OWT" env-description:"two"`
+	}
+
+	type testDefaultEnv struct {
+		One   int `env:"ONE" env-description:"one" env-default:"1"`
+		Two   int `env:"TWO" env-description:"two" env-default:"2"`
+		Three int `env:"THREE" env-description:"three" env-default:"3"`
+	}
+
+	type testNoEnv struct {
+		One   int
+		Two   int
+		Three int
+	}
+
+	header := "test header:"
+
+	tests := []struct {
+		name    string
+		cfg     interface{}
+		header  *string
+		want    string
+		wantErr bool
+	}{
+		{
+			name:    "single env",
+			cfg:     &testSingleEnv{},
+			header:  nil,
+			want:    "Environment variables:\n  ONE\tone\n  TWO\ttwo\n  THREE\tthree",
+			wantErr: false,
+		},
+
+		{
+			name:    "several env",
+			cfg:     &testSeveralEnv{},
+			header:  nil,
+			want:    "Environment variables:\n  ONE\tone\n  ENO\tone\n  TWO\ttwo\n  OWT\ttwo",
+			wantErr: false,
+		},
+
+		{
+			name:    "default env",
+			cfg:     &testDefaultEnv{},
+			header:  nil,
+			want:    "Environment variables:\n  ONE\tone\t[default:1]\n  TWO\ttwo\t[default:2]\n  THREE\tthree\t[default:3]",
+			wantErr: false,
+		},
+
+		{
+			name:    "no env",
+			cfg:     &testNoEnv{},
+			header:  nil,
+			want:    "",
+			wantErr: false,
+		},
+
+		{
+			name:    "custom header",
+			cfg:     &testSingleEnv{},
+			header:  &header,
+			want:    "test header:\n  ONE\tone\n  TWO\ttwo\n  THREE\tthree",
+			wantErr: false,
+		},
+
+		{
+			name:    "error",
+			cfg:     123,
+			header:  nil,
+			want:    "",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := GetDescription(tt.cfg, tt.header)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("wrong error behavior %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("wrong description text %s, want %s", got, tt.want)
 			}
 		})
 	}

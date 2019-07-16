@@ -177,8 +177,14 @@ func readStructMetadata(cfg interface{}) ([]structMeta, error) {
 
 		_, upd := fType.Tag.Lookup("env-upd")
 
+		envList := make([]string, 0)
+
+		if envs, ok := fType.Tag.Lookup("env"); ok && len(envs) != 0 {
+			envList = strings.Split(envs, DefaultSeparator)
+		}
+
 		metas = append(metas, structMeta{
-			envList:     strings.Split(fType.Tag.Get("env"), DefaultSeparator),
+			envList:     envList,
 			fieldValue:  s.Field(idx),
 			defValue:    defValue,
 			separator:   separator,
@@ -338,4 +344,59 @@ func parseValue(field reflect.Value, value, sep string) error {
 	}
 
 	return nil
+}
+
+// GetDescription returns a description of environment variables.
+// You can provide a custom header text.
+//
+// Example
+//
+//	 type ConfigServer struct {
+//	 	Port     string `env:"PORT" env-description:"server port"`
+//	 	Host     string `env:"HOST" env-description:"server host"`
+//	 }
+//
+//	 var cfg ConfigRemote
+//
+//	 help, err := cleanenv.GetDescription(&cfg, nil)
+//	 if err != nil {
+//	     ...
+//	 }
+//
+// You will get the following:
+//
+// 	Environment variables:
+//  	 PORT  server port
+//  	 HOST  server host
+func GetDescription(cfg interface{}, headerText *string) (string, error) {
+	meta, err := readStructMetadata(cfg)
+	if err != nil {
+		return "", err
+	}
+
+	var header, description string
+
+	if headerText != nil {
+		header = *headerText
+	} else {
+		header = "Environment variables:"
+	}
+
+	for _, m := range meta {
+		if len(m.envList) == 0 {
+			continue
+		}
+
+		for _, env := range m.envList {
+			description += fmt.Sprintf("\n  %s\t%s", env, m.description)
+			if m.defValue != nil {
+				description += fmt.Sprintf("\t[default:%s]", *m.defValue)
+			}
+		}
+	}
+
+	if description != "" {
+		return header + description, nil
+	}
+	return "", nil
 }

@@ -14,12 +14,6 @@ This is a simple configuration reading tool. It just does the following:
 - reads and parses configuration structure from the file
 - reads and overwrites configuration structure from environment variables
 
-## Roadmap
-
-- [ ] Description
-- [ ] Setters
-- [ ] Custom update handlers
-
 ## Installation
 
 To install the package run
@@ -119,13 +113,41 @@ if err != nil {
 
 Here remote host and port may change in a distributed system architecture. Fields `cfg.Port` and `cfg.Host` can be updated in the runtime from corresponding environment variables. You can update them before the remote service call. Field `cfg.UserName` will not be changed after the initial read, though.
 
+### Description
+
+You can get descriptions of all environment variables to use them in help documentation.
+
+```go
+import github.com/ilyakaznacheev/cleanenv
+
+type ConfigServer struct {
+    Port     string `env:"PORT" env-description:"server port"`
+    Host     string `env:"HOST" env-description:"server host"`
+}
+
+var cfg ConfigRemote
+
+help, err := cleanenv.GetDescription(&cfg, nil)
+if err != nil {
+    ...
+}
+```
+
+You will get the following:
+
+```
+Environment variables:
+  PORT  server port
+  HOST  server host
+```
+
 ## Model Format
 
 Library uses tags to configure model of configuration structure. There are following tags:
 
 - `env="<name>"` - environment variable name (e.g. `env="PORT"`);
 - `env-upd` - flag to mark a field as updatable. Run `UpdateEnv(&cfg)` to refresh updatable variables from environment;
-- `env-default="<value>"` - default value. If the field wasn't filled from the environment variable default value will be used instead$
+- `env-default="<value>"` - default value. If the field wasn't filled from the environment variable default value will be used instead;
 - `env-separator="<value>"` - custom list and map separator. If not set, the default separator `,` will be used;
 - `env-description="<value>"` - environment variable description.
 
