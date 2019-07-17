@@ -434,11 +434,11 @@ func parseValue(field reflect.Value, value, sep string) error {
 //
 // You will get the following:
 //
-// 	Environment variables:
-// 	  PORT string
-// 	  	server port (default "localhost")
-//    HOST string
-// 	  	server host (default "8080")
+//	Environment variables:
+//	  PORT string
+// 	    	server port (default "localhost")
+//	  HOST string
+// 	    	server host (default "8080")
 func GetDescription(cfg interface{}, headerText *string) (string, error) {
 	meta, err := readStructMetadata(cfg)
 	if err != nil {
