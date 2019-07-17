@@ -325,6 +325,19 @@ func TestGetDescription(t *testing.T) {
 		Three int `env:"THREE" env-description:"three" env-default:"3"`
 	}
 
+	type testSubOne struct {
+		One int `env:"ONE" env-description:"one"`
+	}
+
+	type testSubTwo struct {
+		Two int `env:"TWO" env-description:"two"`
+	}
+
+	type testDeep struct {
+		OneStruct testSubOne
+		TwoStruct testSubTwo
+	}
+
 	type testNoEnv struct {
 		One   int
 		Two   int
@@ -361,6 +374,14 @@ func TestGetDescription(t *testing.T) {
 			cfg:     &testDefaultEnv{},
 			header:  nil,
 			want:    "Environment variables:\n  ONE\tone\t[default:1]\n  TWO\ttwo\t[default:2]\n  THREE\tthree\t[default:3]",
+			wantErr: false,
+		},
+
+		{
+			name:    "deep structure",
+			cfg:     &testDeep{},
+			header:  nil,
+			want:    "Environment variables:\n  ONE\tone\n  TWO\ttwo",
 			wantErr: false,
 		},
 

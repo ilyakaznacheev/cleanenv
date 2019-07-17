@@ -16,7 +16,6 @@ package cleanenv
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -28,11 +27,6 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"gopkg.in/yaml.v2"
-)
-
-var (
-	// ErrInconsistentType is a type inconsistency error
-	ErrInconsistentType = errors.New("error during parsing config structure metadata")
 )
 
 const (
@@ -137,15 +131,14 @@ type structMeta struct {
 func readStructMetadata(cfg interface{}) ([]structMeta, error) {
 	s := reflect.ValueOf(cfg)
 
-	// check that under interface we have a pointer to the data
-	if s.Kind() != reflect.Ptr {
-		return nil, ErrInconsistentType
+	// unwrap pointer
+	if s.Kind() == reflect.Ptr {
+		s = s.Elem()
 	}
-	s = s.Elem()
 
 	// process only structures
 	if s.Kind() != reflect.Struct {
-		return nil, ErrInconsistentType
+		return nil, fmt.Errorf("wrong type %v", s.Kind())
 	}
 	typeInfo := s.Type()
 
@@ -159,6 +152,16 @@ func readStructMetadata(cfg interface{}) ([]structMeta, error) {
 			defValue  *string
 			separator string
 		)
+
+		// process nested structure
+		if fld := s.Field(idx); fld.Kind() == reflect.Struct {
+			subMeta, err := readStructMetadata(fld.Addr().Interface())
+			if err != nil {
+				return nil, err
+			}
+			metas = append(metas, subMeta...)
+			continue
+		}
 
 		// check is the field value can be changed
 		if !s.Field(idx).CanSet() {
