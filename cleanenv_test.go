@@ -358,9 +358,9 @@ func TestGetDescription(t *testing.T) {
 			cfg:    &testSingleEnv{},
 			header: nil,
 			want: "Environment variables:" +
-				"\n\tONE\tint\n\t\tone" +
-				"\n\tTWO\tint\n\t\ttwo" +
-				"\n\tTHREE\tint\n\t\tthree",
+				"\n  ONE int\n    \tone" +
+				"\n  TWO int\n    \ttwo" +
+				"\n  THREE int\n    \tthree",
 			wantErr: false,
 		},
 
@@ -369,10 +369,10 @@ func TestGetDescription(t *testing.T) {
 			cfg:    &testSeveralEnv{},
 			header: nil,
 			want: "Environment variables:" +
-				"\n\tONE\tint\n\t\tone" +
-				"\n\tENO\tint\n\t\tone" +
-				"\n\tTWO\tint\n\t\ttwo" +
-				"\n\tOWT\tint\n\t\ttwo",
+				"\n  ONE int\n    \tone" +
+				"\n  ENO int (alternative to ONE)\n    \tone" +
+				"\n  TWO int\n    \ttwo" +
+				"\n  OWT int (alternative to TWO)\n    \ttwo",
 			wantErr: false,
 		},
 
@@ -381,9 +381,9 @@ func TestGetDescription(t *testing.T) {
 			cfg:    &testDefaultEnv{},
 			header: nil,
 			want: "Environment variables:" +
-				"\n\tONE\tint\t[default:1]\n\t\tone" +
-				"\n\tTWO\tint\t[default:2]\n\t\ttwo" +
-				"\n\tTHREE\tint\t[default:3]\n\t\tthree",
+				"\n  ONE int\n    \tone (default \"1\")" +
+				"\n  TWO int\n    \ttwo (default \"2\")" +
+				"\n  THREE int\n    \tthree (default \"3\")",
 			wantErr: false,
 		},
 
@@ -392,8 +392,8 @@ func TestGetDescription(t *testing.T) {
 			cfg:    &testDeep{},
 			header: nil,
 			want: "Environment variables:" +
-				"\n\tONE\tint\n\t\tone" +
-				"\n\tTWO\tint\n\t\ttwo",
+				"\n  ONE int\n    \tone" +
+				"\n  TWO int\n    \ttwo",
 			wantErr: false,
 		},
 
@@ -410,9 +410,9 @@ func TestGetDescription(t *testing.T) {
 			cfg:    &testSingleEnv{},
 			header: &header,
 			want: "test header:" +
-				"\n\tONE\tint\n\t\tone" +
-				"\n\tTWO\tint\n\t\ttwo" +
-				"\n\tTHREE\tint\n\t\tthree",
+				"\n  ONE int\n    \tone" +
+				"\n  TWO int\n    \ttwo" +
+				"\n  THREE int\n    \tthree",
 			wantErr: false,
 		},
 

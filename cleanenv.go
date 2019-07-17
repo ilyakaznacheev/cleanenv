@@ -58,6 +58,23 @@ type Updater interface {
 
 // ReadConfig reads configuration file and parses it depending on tags in structure provided.
 // Then it reads and parses
+//
+// Example:
+//
+//	 type ConfigDatabase struct {
+//	 	Port     string `yml:"port" env:"PORT" env-default:"5432"`
+//	 	Host     string `yml:"host" env:"HOST" env-default:"localhost"`
+//	 	Name     string `yml:"name" env:"NAME" env-default:"postgres"`
+//	 	User     string `yml:"user" env:"USER" env-default:"user"`
+//	 	Password string `yml:"password" env:"PASSWORD"`
+//	 }
+//
+//	 var cfg ConfigDatabase
+//
+//	 err := cleanenv.ReadConfig("config.yml", &cfg)
+//	 if err != nil {
+//	     ...
+//	 }
 func ReadConfig(path string, cfg interface{}) error {
 	err := parseFile(path, cfg)
 	if err != nil {
@@ -68,19 +85,64 @@ func ReadConfig(path string, cfg interface{}) error {
 }
 
 // ReadEnv reads environment variables into the structure.
+//
+// Example:
+//
+// 	type ConfigDatabase struct {
+//	 	Port     string `env:"PORT" env-default:"5432"`
+//	 	Host     string `env:"HOST" env-default:"localhost"`
+//	 	Name     string `env:"NAME" env-default:"postgres"`
+//	 	User     string `env:"USER" env-default:"user"`
+//	 	Password string `env:"PASSWORD"`
+//	 }
+//
+//	 var cfg ConfigDatabase
+//
+//	 err := cleanenv.ReadEnv(&cfg)
+//	 if err != nil {
+//	     ...
+//	 }
 func ReadEnv(cfg interface{}) error {
 	return readEnvVars(cfg, false)
 }
 
 // UpdateEnv rereads (updates) environment variables in the structure.
 //
-// To mark the field as updatable provide the tag "upd"
+// To mark the field as updatable provide the tag "env-upd"
+//
+// Example:
+//
+//	 type ConfigRemote struct {
+//	 	Port     string `env:"PORT" env-upd`
+//	     Host     string `env:"HOST" env-upd`
+//	     UserName string `env:"USERNAME"`
+//	 }
+//
+//	 var cfg ConfigRemote
+//
+//	 cleanenv.ReadEnv(&cfg)
+//
+//	 // ... some actions in-between
+//
+//	 err := cleanenv.UpdateEnv(&cfg)
+//	 if err != nil {
+//	     ...
+//	 }
 func UpdateEnv(cfg interface{}) error {
 	return readEnvVars(cfg, true)
 }
 
+// parseFile parses configuration file according to it's extension
+//
+// Currently following file extensions are supported:
+//
+// - yaml
+//
+// - json
+//
+// - toml
 func parseFile(path string, cfg interface{}) error {
-	// read the configuration file
+	// open the configuration file
 	f, err := os.OpenFile(path, os.O_RDONLY|os.O_SYNC, 0)
 	if err != nil {
 		return err
@@ -114,11 +176,13 @@ func parseJSON(r io.Reader, str interface{}) error {
 	return json.NewDecoder(r).Decode(str)
 }
 
+// parseTOML parses TOML from reader to data structure
 func parseTOML(r io.Reader, str interface{}) error {
 	_, err := toml.DecodeReader(r, str)
 	return err
 }
 
+// structMeta is a strucrute metadata entity
 type structMeta struct {
 	envList     []string
 	fieldValue  reflect.Value
@@ -128,6 +192,7 @@ type structMeta struct {
 	updatable   bool
 }
 
+// readStructMetadata reads structure metadata (types, tags, etc.)
 func readStructMetadata(cfg interface{}) ([]structMeta, error) {
 	s := reflect.ValueOf(cfg)
 
@@ -199,6 +264,7 @@ func readStructMetadata(cfg interface{}) ([]structMeta, error) {
 	return metas, nil
 }
 
+// readEnvVars reads environment variables to the provided configuration structure
 func readEnvVars(cfg interface{}, update bool) error {
 	metaInfo, err := readStructMetadata(cfg)
 	if err != nil {
@@ -355,8 +421,8 @@ func parseValue(field reflect.Value, value, sep string) error {
 // Example
 //
 //	 type ConfigServer struct {
-//	 	Port     string `env:"PORT" env-description:"server port"`
-//	 	Host     string `env:"HOST" env-description:"server host"`
+//	 	Port     string `env:"PORT" env-description:"server port" env-default:"localhost"`
+//	 	Host     string `env:"HOST" env-description:"server host" env-default:"8080"`
 //	 }
 //
 //	 var cfg ConfigRemote
@@ -369,8 +435,10 @@ func parseValue(field reflect.Value, value, sep string) error {
 // You will get the following:
 //
 // 	Environment variables:
-//  	 PORT  server port
-//  	 HOST  server host
+// 	  PORT string
+// 	  	server port (default "localhost")
+//    HOST string
+// 	  	server host (default "8080")
 func GetDescription(cfg interface{}, headerText *string) (string, error) {
 	meta, err := readStructMetadata(cfg)
 	if err != nil {
@@ -390,12 +458,16 @@ func GetDescription(cfg interface{}, headerText *string) (string, error) {
 			continue
 		}
 
-		for _, env := range m.envList {
-			elemDescription := fmt.Sprintf("\n\t%s\t%s", env, m.fieldValue.Kind())
-			if m.defValue != nil {
-				elemDescription += fmt.Sprintf("\t[default:%s]", *m.defValue)
+		for idx, env := range m.envList {
+
+			elemDescription := fmt.Sprintf("\n  %s %s", env, m.fieldValue.Kind())
+			if idx > 0 {
+				elemDescription += fmt.Sprintf(" (alternative to %s)", m.envList[0])
 			}
-			elemDescription += fmt.Sprintf("\n\t\t%s", m.description)
+			elemDescription += fmt.Sprintf("\n    \t%s", m.description)
+			if m.defValue != nil {
+				elemDescription += fmt.Sprintf(" (default %q)", *m.defValue)
+			}
 			description += elemDescription
 		}
 	}

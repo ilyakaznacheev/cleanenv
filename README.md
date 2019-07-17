@@ -14,6 +14,22 @@ This is a simple configuration reading tool. It just does the following:
 - reads and parses configuration structure from the file
 - reads and overwrites configuration structure from environment variables
 
+## Content
+
+- [Installation](#installation)
+- [Usage](#usage)
+    - [Read Configuration](#read_configuration)
+    - [Read Environment Variables Only](#read_environment_variables_only)
+    - [Update Environment Variables](#update_environment_variables)
+    - [Description](#description)
+- [Model Format](#Model Format)
+- [Custom Functions](#custom_functions)
+    - [Custom Value Setter](#custom_value_setter)
+    - [Custom Value Update](#custom_value_update)
+- [Supported File Formats](#supported_file_formats)
+- [Examples](#examples)
+- [Contribution](#contribution)
+
 ## Installation
 
 To install the package run
@@ -33,7 +49,7 @@ There are just several actions you can do with this tool and probably only thing
 - read environment variables
 - read some environment variables again
 
-### Read configuration
+### Read Configuration
 
 You can read a configuration file and environment variables in a single function call.
 
@@ -62,7 +78,7 @@ This will do the following:
 1. reads environment variables and overwrites values from the file with the values which was found in the environment (`env` tag);
 1. if no value was found on the first two steps, the field will be filled with the default value (`env-default` tag) if it is set.
 
-### Read only environment variables
+### Read Environment Variables Only
 
 Sometimes you don't want to use configuration files at all, or you may want to use `.env` file format instead. Thus, you can limit yourself with only reading environment variables:
 
@@ -85,7 +101,7 @@ if err != nil {
 }
 ```
 
-### Update environment variables
+### Update Environment Variables
 
 Some environment variables may change during the application run. To get the new values you need to mark these variables as updatable with the tag `env-upd` and then run the update function:
 
@@ -99,7 +115,6 @@ type ConfigRemote struct {
 }
 
 var cfg ConfigRemote
-
 
 cleanenv.ReadEnv(&cfg)
 
@@ -151,7 +166,7 @@ Library uses tags to configure model of configuration structure. There are follo
 - `env-separator="<value>"` - custom list and map separator. If not set, the default separator `,` will be used;
 - `env-description="<value>"` - environment variable description.
 
-## Custom functions
+## Custom Functions
 
 To enhance package abilities you can use some custom functions.
 
@@ -195,7 +210,7 @@ func (c *Config) Update() error {
 }
 ```
 
-## Supported file formats
+## Supported File Formats
 
 There are several most popular config file formats supported:
 
@@ -203,7 +218,7 @@ There are several most popular config file formats supported:
 - JSON
 - TOML
 
-## Example
+## Examples
 
 ```go
 type Config struct {
@@ -220,3 +235,13 @@ if err != nil {
 ```
 
 This code will try to read and parse the configuration file `config.yml` as the structure is described in the `Config` structure. Then it will overwrite fields from available environment variables (`PORT`, `HOST`).
+
+For more details check the [example](/example) directory.
+
+## Contribution
+
+The tool is open-sourced under the [MIT](LICENSE) license.
+
+If you will find some error, want to add something or ask a question - feel free to create an issue and/or make a pull request.
+
+Any contribution is welcome.
