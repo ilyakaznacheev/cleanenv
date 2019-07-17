@@ -354,34 +354,46 @@ func TestGetDescription(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "single env",
-			cfg:     &testSingleEnv{},
-			header:  nil,
-			want:    "Environment variables:\n  ONE\tone\n  TWO\ttwo\n  THREE\tthree",
+			name:   "single env",
+			cfg:    &testSingleEnv{},
+			header: nil,
+			want: "Environment variables:" +
+				"\n\tONE\tint\n\t\tone" +
+				"\n\tTWO\tint\n\t\ttwo" +
+				"\n\tTHREE\tint\n\t\tthree",
 			wantErr: false,
 		},
 
 		{
-			name:    "several env",
-			cfg:     &testSeveralEnv{},
-			header:  nil,
-			want:    "Environment variables:\n  ONE\tone\n  ENO\tone\n  TWO\ttwo\n  OWT\ttwo",
+			name:   "several env",
+			cfg:    &testSeveralEnv{},
+			header: nil,
+			want: "Environment variables:" +
+				"\n\tONE\tint\n\t\tone" +
+				"\n\tENO\tint\n\t\tone" +
+				"\n\tTWO\tint\n\t\ttwo" +
+				"\n\tOWT\tint\n\t\ttwo",
 			wantErr: false,
 		},
 
 		{
-			name:    "default env",
-			cfg:     &testDefaultEnv{},
-			header:  nil,
-			want:    "Environment variables:\n  ONE\tone\t[default:1]\n  TWO\ttwo\t[default:2]\n  THREE\tthree\t[default:3]",
+			name:   "default env",
+			cfg:    &testDefaultEnv{},
+			header: nil,
+			want: "Environment variables:" +
+				"\n\tONE\tint\t[default:1]\n\t\tone" +
+				"\n\tTWO\tint\t[default:2]\n\t\ttwo" +
+				"\n\tTHREE\tint\t[default:3]\n\t\tthree",
 			wantErr: false,
 		},
 
 		{
-			name:    "deep structure",
-			cfg:     &testDeep{},
-			header:  nil,
-			want:    "Environment variables:\n  ONE\tone\n  TWO\ttwo",
+			name:   "deep structure",
+			cfg:    &testDeep{},
+			header: nil,
+			want: "Environment variables:" +
+				"\n\tONE\tint\n\t\tone" +
+				"\n\tTWO\tint\n\t\ttwo",
 			wantErr: false,
 		},
 
@@ -394,10 +406,13 @@ func TestGetDescription(t *testing.T) {
 		},
 
 		{
-			name:    "custom header",
-			cfg:     &testSingleEnv{},
-			header:  &header,
-			want:    "test header:\n  ONE\tone\n  TWO\ttwo\n  THREE\tthree",
+			name:   "custom header",
+			cfg:    &testSingleEnv{},
+			header: &header,
+			want: "test header:" +
+				"\n\tONE\tint\n\t\tone" +
+				"\n\tTWO\tint\n\t\ttwo" +
+				"\n\tTHREE\tint\n\t\tthree",
 			wantErr: false,
 		},
 

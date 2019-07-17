@@ -391,10 +391,12 @@ func GetDescription(cfg interface{}, headerText *string) (string, error) {
 		}
 
 		for _, env := range m.envList {
-			description += fmt.Sprintf("\n  %s\t%s", env, m.description)
+			elemDescription := fmt.Sprintf("\n\t%s\t%s", env, m.fieldValue.Kind())
 			if m.defValue != nil {
-				description += fmt.Sprintf("\t[default:%s]", *m.defValue)
+				elemDescription += fmt.Sprintf("\t[default:%s]", *m.defValue)
 			}
+			elemDescription += fmt.Sprintf("\n\t\t%s", m.description)
+			description += elemDescription
 		}
 	}
 
