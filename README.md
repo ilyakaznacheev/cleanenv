@@ -6,6 +6,8 @@ Minimalistic configuration reader
 [![Go Report Card](https://goreportcard.com/badge/github.com/ilyakaznacheev/cleanenv)](https://goreportcard.com/report/github.com/ilyakaznacheev/cleanenv)
 [![Coverage Status](https://codecov.io/github/ilyakaznacheev/cleanenv/coverage.svg?branch=master)](https://codecov.io/gh/ilyakaznacheev/cleanenv)
 [![Build Status](https://travis-ci.org/ilyakaznacheev/cleanenv.svg?branch=master)](https://travis-ci.org/ilyakaznacheev/cleanenv)
+[![GitHub release](https://img.shields.io/github/release/ilyakaznacheev/cleanenv.svg)](https://github.com/ilyakaznacheev/cleanenv/releases/)
+[https://img.shields.io/github/license/ilyakaznacheev/cleanenv.svg](https://github.com/ilyakaznacheev/cleanenv/blob/master/LICENSE)
 
 ## Overview
 
@@ -40,7 +42,8 @@ go get -u github.com/ilyakaznacheev/cleanenv
 
 ## Usage
 
-The package is oriented to be simple in use.
+The package is oriented to be simple in use and explicitness.
+
 The main idea is to use a structured configuration variable instead of any sort of dynamic set of configuration fields like some libraries does, to avoid unnecessary type conversions and move the configuration through the program as a simple structure, not as an object with complex behavior.
 
 There are just several actions you can do with this tool and probably only things you want to do with your config if your application is not too complicated.
@@ -245,3 +248,7 @@ The tool is open-sourced under the [MIT](LICENSE) license.
 If you will find some error, want to add something or ask a question - feel free to create an issue and/or make a pull request.
 
 Any contribution is welcome.
+
+## Thanks
+
+Big thanks to a project [kelseyhightower/envconfig](https://github.com/kelseyhightower/envconfig) for inspiration.
