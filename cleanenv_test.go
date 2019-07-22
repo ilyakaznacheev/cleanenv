@@ -333,6 +333,13 @@ func TestParseFileEnv(t *testing.T) {
 		},
 
 		{
+			name:    "empty file",
+			has:     map[string]string{},
+			want:    map[string]string{},
+			wantErr: false,
+		},
+
+		{
 			name:    "error",
 			rawFile: "-",
 			wantErr: true,
