@@ -307,6 +307,75 @@ two = 2`,
 	}
 }
 
+func TestParseFileEnv(t *testing.T) {
+	type dummy struct{}
+
+	tests := []struct {
+		name    string
+		rawFile string
+		has     map[string]string
+		want    map[string]string
+		wantErr bool
+	}{
+		{
+			name: "simple file",
+			has: map[string]string{
+				"TEST1": "aaa",
+				"TEST2": "bbb",
+				"TEST3": "ccc",
+			},
+			want: map[string]string{
+				"TEST1": "aaa",
+				"TEST2": "bbb",
+				"TEST3": "ccc",
+			},
+			wantErr: false,
+		},
+
+		{
+			name:    "error",
+			rawFile: "-",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpFile, err := ioutil.TempFile(os.TempDir(), "*.env")
+			if err != nil {
+				t.Fatal("cannot create temporary file:", err)
+			}
+			defer os.Remove(tmpFile.Name())
+
+			var file string
+			if tt.rawFile == "" {
+				for key, val := range tt.has {
+					file += fmt.Sprintf("%s=%s\n", key, val)
+				}
+			} else {
+				file = tt.rawFile
+			}
+
+			text := []byte(file)
+			if _, err = tmpFile.Write(text); err != nil {
+				t.Fatal("failed to write to temporary file:", err)
+			}
+
+			var cfg dummy
+			if err = parseFile(tmpFile.Name(), &cfg); (err != nil) != tt.wantErr {
+				t.Errorf("wrong error behavior %v, wantErr %v", err, tt.wantErr)
+			}
+			for key, val := range tt.has {
+				if envVal := os.Getenv(key); err == nil && val != envVal {
+					t.Errorf("wrong value %s of var %s, want %s", envVal, key, val)
+				}
+			}
+
+			os.Clearenv()
+		})
+	}
+}
+
 func TestGetDescription(t *testing.T) {
 	type testSingleEnv struct {
 		One   int `env:"ONE" env-description:"one"`

@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+	"github.com/joho/godotenv"
 	"gopkg.in/yaml.v2"
 )
 
@@ -141,6 +142,8 @@ func UpdateEnv(cfg interface{}) error {
 // - json
 //
 // - toml
+//
+// - env
 func parseFile(path string, cfg interface{}) error {
 	// open the configuration file
 	f, err := os.OpenFile(path, os.O_RDONLY|os.O_SYNC, 0)
@@ -157,6 +160,8 @@ func parseFile(path string, cfg interface{}) error {
 		err = parseJSON(f, cfg)
 	case ".toml":
 		err = parseTOML(f, cfg)
+	case ".env":
+		err = parseENV(f, cfg)
 	default:
 		return fmt.Errorf("file format '%s' doesn't supported by the parser", ext)
 	}
@@ -180,6 +185,21 @@ func parseJSON(r io.Reader, str interface{}) error {
 func parseTOML(r io.Reader, str interface{}) error {
 	_, err := toml.DecodeReader(r, str)
 	return err
+}
+
+// parseENV, in fact, doesn't fill the structure with environment variable values.
+// It just parses ENV file and sets all variables to the environment.
+// Thus, the structure should be filled at the next steps.
+func parseENV(r io.Reader, str interface{}) error {
+	vars, err := godotenv.Parse(r)
+	if err != nil {
+		return err
+	}
+
+	for env, val := range vars {
+		os.Setenv(env, val)
+	}
+	return nil
 }
 
 // structMeta is a strucrute metadata entity
