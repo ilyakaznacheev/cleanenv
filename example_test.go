@@ -57,8 +57,8 @@ func ExampleGetDescription_defaults() {
 	//     	third parameter (default "test")
 }
 
-// ExampleGetDescription_variable_list builds a description text from structure tags with description of alternative variables
-func ExampleGetDescription_variable_list() {
+// ExampleGetDescription_variableList builds a description text from structure tags with description of alternative variables
+func ExampleGetDescription_variableList() {
 	type config struct {
 		FirstVar int64 `env:"ONE,TWO,THREE" env-description:"first found parameter"`
 	}
@@ -80,8 +80,8 @@ func ExampleGetDescription_variable_list() {
 	//     	first found parameter
 }
 
-// ExampleGetDescription_custom_header_text builds a description text from structure tags with custom header string
-func ExampleGetDescription_custom_header_text() {
+// ExampleGetDescription_customHeaderText builds a description text from structure tags with custom header string
+func ExampleGetDescription_customHeaderText() {
 	type config struct {
 		One   int64   `env:"ONE" env-description:"first parameter"`
 		Two   float64 `env:"TWO" env-description:"second parameter"`
@@ -177,8 +177,8 @@ func (f MyField) String() string {
 	return string(f)
 }
 
-// ExampleSetter_SetValue uses type with a custom setter to parse environment variable data
-func ExampleSetter_SetValue() {
+// Example_setter uses type with a custom setter to parse environment variable data
+func Example_setter() {
 	type config struct {
 		Default string  `env:"ONE"`
 		Custom  MyField `env:"TWO"`
@@ -205,8 +205,8 @@ func (c *ConfigUpdate) Update() error {
 	return nil
 }
 
-// ExampleUpdater_Update uses a type with a custom updater
-func ExampleUpdater_Update() {
+// Example_updater uses a type with a custom updater
+func Example_updater() {
 	var cfg ConfigUpdate
 
 	os.Setenv("DEFAULT", "default")
