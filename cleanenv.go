@@ -41,11 +41,11 @@ const (
 //
 // 	type MyField string
 //
-// 	func (f MyField) SetValue(s string) error  {
+// 	func (f *MyField) SetValue(s string) error {
 // 		if s == "" {
 // 			return fmt.Errorf("field value can't be empty")
 // 		}
-// 		f = MyField("my field is: "+ s)
+// 		*f = MyField("my field is: " + s)
 // 		return nil
 // 	}
 type Setter interface {
@@ -86,49 +86,11 @@ func ReadConfig(path string, cfg interface{}) error {
 }
 
 // ReadEnv reads environment variables into the structure.
-//
-// Example:
-//
-// 	type ConfigDatabase struct {
-//	 	Port     string `env:"PORT" env-default:"5432"`
-//	 	Host     string `env:"HOST" env-default:"localhost"`
-//	 	Name     string `env:"NAME" env-default:"postgres"`
-//	 	User     string `env:"USER" env-default:"user"`
-//	 	Password string `env:"PASSWORD"`
-//	 }
-//
-//	 var cfg ConfigDatabase
-//
-//	 err := cleanenv.ReadEnv(&cfg)
-//	 if err != nil {
-//	     ...
-//	 }
 func ReadEnv(cfg interface{}) error {
 	return readEnvVars(cfg, false)
 }
 
 // UpdateEnv rereads (updates) environment variables in the structure.
-//
-// To mark the field as updatable provide the tag "env-upd"
-//
-// Example:
-//
-//	 type ConfigRemote struct {
-//	 	Port     string `env:"PORT" env-upd`
-//	     Host     string `env:"HOST" env-upd`
-//	     UserName string `env:"USERNAME"`
-//	 }
-//
-//	 var cfg ConfigRemote
-//
-//	 cleanenv.ReadEnv(&cfg)
-//
-//	 // ... some actions in-between
-//
-//	 err := cleanenv.UpdateEnv(&cfg)
-//	 if err != nil {
-//	     ...
-//	 }
 func UpdateEnv(cfg interface{}) error {
 	return readEnvVars(cfg, true)
 }
@@ -331,6 +293,8 @@ func parseValue(field reflect.Value, value, sep string) error {
 	if field.CanInterface() {
 		if cs, ok := field.Interface().(Setter); ok {
 			return cs.SetValue(value)
+		} else if csp, ok := field.Addr().Interface().(Setter); ok {
+			return csp.SetValue(value)
 		}
 	}
 
@@ -437,28 +401,6 @@ func parseValue(field reflect.Value, value, sep string) error {
 
 // GetDescription returns a description of environment variables.
 // You can provide a custom header text.
-//
-// Example
-//
-//	 type ConfigServer struct {
-//	 	Port     string `env:"PORT" env-description:"server port" env-default:"localhost"`
-//	 	Host     string `env:"HOST" env-description:"server host" env-default:"8080"`
-//	 }
-//
-//	 var cfg ConfigRemote
-//
-//	 help, err := cleanenv.GetDescription(&cfg, nil)
-//	 if err != nil {
-//	     ...
-//	 }
-//
-// You will get the following:
-//
-//	Environment variables:
-//	  PORT string
-// 	    	server port (default "localhost")
-//	  HOST string
-// 	    	server host (default "8080")
 func GetDescription(cfg interface{}, headerText *string) (string, error) {
 	meta, err := readStructMetadata(cfg)
 	if err != nil {
