@@ -1,6 +1,7 @@
 package cleanenv
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -434,6 +435,94 @@ func TestGetDescription(t *testing.T) {
 			}
 			if got != tt.want {
 				t.Errorf("wrong description text %s, want %s", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestFUsage(t *testing.T) {
+	type testSingleEnv struct {
+		One   int `env:"ONE" env-description:"one"`
+		Two   int `env:"TWO" env-description:"two"`
+		Three int `env:"THREE" env-description:"three"`
+	}
+
+	customHeader := "test header:"
+
+	tests := []struct {
+		name       string
+		headerText *string
+		usageTexts []string
+		want       string
+	}{
+		{
+			name:       "no custom usage",
+			headerText: nil,
+			usageTexts: nil,
+			want: "Environment variables:" +
+				"\n  ONE int\n    \tone" +
+				"\n  TWO int\n    \ttwo" +
+				"\n  THREE int\n    \tthree\n",
+		},
+
+		{
+			name:       "custom header",
+			headerText: &customHeader,
+			usageTexts: nil,
+			want: "test header:" +
+				"\n  ONE int\n    \tone" +
+				"\n  TWO int\n    \ttwo" +
+				"\n  THREE int\n    \tthree\n",
+		},
+
+		{
+			name:       "custom usages",
+			headerText: nil,
+			usageTexts: []string{
+				"test1",
+				"test2",
+				"test3",
+			},
+			want: "test1\ntest2\ntest3\n" +
+				"\nEnvironment variables:" +
+				"\n  ONE int\n    \tone" +
+				"\n  TWO int\n    \ttwo" +
+				"\n  THREE int\n    \tthree\n",
+		},
+
+		{
+			name:       "custom usages and header",
+			headerText: &customHeader,
+			usageTexts: []string{
+				"test1",
+				"test2",
+				"test3",
+			},
+			want: "test1\ntest2\ntest3\n" +
+				"\ntest header:" +
+				"\n  ONE int\n    \tone" +
+				"\n  TWO int\n    \ttwo" +
+				"\n  THREE int\n    \tthree\n",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := &bytes.Buffer{}
+			uFuncs := make([]func(), 0, len(tt.usageTexts))
+			for _, text := range tt.usageTexts {
+				uFuncs = append(uFuncs, func(a string) func() {
+					return func() {
+						fmt.Fprintln(w, a)
+					}
+				}(text))
+			}
+			var cfg testSingleEnv
+			FUsage(w, &cfg, tt.headerText, uFuncs...)()
+			gotRaw, _ := ioutil.ReadAll(w)
+			got := string(gotRaw)
+
+			if got != tt.want {
+				t.Errorf("wrong output %v, want %v", got, tt.want)
 			}
 		})
 	}

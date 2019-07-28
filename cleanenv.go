@@ -16,6 +16,7 @@ package cleanenv
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -418,4 +419,32 @@ func GetDescription(cfg interface{}, headerText *string) (string, error) {
 		return header + description, nil
 	}
 	return "", nil
+}
+
+// Usage returns a configuration usage help.
+// Other usage instructions can be wrapped in and executed before this usage function.
+// The default output is STDERR.
+func Usage(cfg interface{}, headerText *string, usageFuncs ...func()) func() {
+	return FUsage(os.Stderr, cfg, headerText, usageFuncs...)
+}
+
+// FUsage prints configuration help into the custom output.
+// Other usage instructions can be wrapped in and executed before this usage function
+func FUsage(w io.Writer, cfg interface{}, headerText *string, usageFuncs ...func()) func() {
+	return func() {
+		for _, fn := range usageFuncs {
+			fn()
+		}
+
+		_ = flag.Usage
+
+		text, err := GetDescription(cfg, headerText)
+		if err != nil {
+			return
+		}
+		if len(usageFuncs) > 0 {
+			fmt.Fprintln(w)
+		}
+		fmt.Fprintln(w, text)
+	}
 }
