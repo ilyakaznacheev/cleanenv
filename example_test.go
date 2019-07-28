@@ -1,6 +1,7 @@
 package cleanenv_test
 
 import (
+	"flag"
 	"fmt"
 	"os"
 
@@ -214,4 +215,43 @@ func Example_updater() {
 	cleanenv.ReadEnv(&cfg)
 	fmt.Printf("%+v\n", cfg)
 	//Output: {Default:default Custom:custom}
+}
+
+func ExampleUsage() {
+	os.Stderr = os.Stdout //replace STDERR with STDOUT for test
+
+	type config struct {
+		One   int64   `env:"ONE" env-description:"first parameter"`
+		Two   float64 `env:"TWO" env-description:"second parameter"`
+		Three string  `env:"THREE" env-description:"third parameter"`
+	}
+
+	// setup flags
+	fset := flag.NewFlagSet("Example", flag.ContinueOnError)
+
+	fset.String("p", "8080", "service port")
+	fset.String("h", "localhost", "service host")
+
+	var cfg config
+	customHeader := "My sweet variables:"
+
+	// get config usage with wrapped flag usage and custom header string
+	u := cleanenv.Usage(&cfg, &customHeader, fset.Usage)
+
+	// print usage to STDERR
+	u()
+
+	//Output: Usage of Example:
+	//   -h string
+	//     	service host (default "localhost")
+	//   -p string
+	//     	service port (default "8080")
+	//
+	// My sweet variables:
+	//   ONE int64
+	//     	first parameter
+	//   TWO float64
+	//     	second parameter
+	//   THREE string
+	//     	third parameter
 }
