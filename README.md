@@ -220,6 +220,7 @@ There are several most popular config file formats supported:
 - YAML
 - JSON
 - TOML
+- ENV
 
 ## Examples
 
