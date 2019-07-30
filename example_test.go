@@ -1,6 +1,7 @@
 package cleanenv_test
 
 import (
+	"flag"
 	"fmt"
 	"os"
 
@@ -57,8 +58,8 @@ func ExampleGetDescription_defaults() {
 	//     	third parameter (default "test")
 }
 
-// ExampleGetDescription_variable_list builds a description text from structure tags with description of alternative variables
-func ExampleGetDescription_variable_list() {
+// ExampleGetDescription_variableList builds a description text from structure tags with description of alternative variables
+func ExampleGetDescription_variableList() {
 	type config struct {
 		FirstVar int64 `env:"ONE,TWO,THREE" env-description:"first found parameter"`
 	}
@@ -80,8 +81,8 @@ func ExampleGetDescription_variable_list() {
 	//     	first found parameter
 }
 
-// ExampleGetDescription_custom_header_text builds a description text from structure tags with custom header string
-func ExampleGetDescription_custom_header_text() {
+// ExampleGetDescription_customHeaderText builds a description text from structure tags with custom header string
+func ExampleGetDescription_customHeaderText() {
 	type config struct {
 		One   int64   `env:"ONE" env-description:"first parameter"`
 		Two   float64 `env:"TWO" env-description:"second parameter"`
@@ -177,8 +178,8 @@ func (f MyField) String() string {
 	return string(f)
 }
 
-// ExampleSetter_SetValue uses type with a custom setter to parse environment variable data
-func ExampleSetter_SetValue() {
+// Example_setter uses type with a custom setter to parse environment variable data
+func Example_setter() {
 	type config struct {
 		Default string  `env:"ONE"`
 		Custom  MyField `env:"TWO"`
@@ -205,8 +206,8 @@ func (c *ConfigUpdate) Update() error {
 	return nil
 }
 
-// ExampleUpdater_Update uses a type with a custom updater
-func ExampleUpdater_Update() {
+// Example_updater uses a type with a custom updater
+func Example_updater() {
 	var cfg ConfigUpdate
 
 	os.Setenv("DEFAULT", "default")
@@ -214,4 +215,43 @@ func ExampleUpdater_Update() {
 	cleanenv.ReadEnv(&cfg)
 	fmt.Printf("%+v\n", cfg)
 	//Output: {Default:default Custom:custom}
+}
+
+func ExampleUsage() {
+	os.Stderr = os.Stdout //replace STDERR with STDOUT for test
+
+	type config struct {
+		One   int64   `env:"ONE" env-description:"first parameter"`
+		Two   float64 `env:"TWO" env-description:"second parameter"`
+		Three string  `env:"THREE" env-description:"third parameter"`
+	}
+
+	// setup flags
+	fset := flag.NewFlagSet("Example", flag.ContinueOnError)
+
+	fset.String("p", "8080", "service port")
+	fset.String("h", "localhost", "service host")
+
+	var cfg config
+	customHeader := "My sweet variables:"
+
+	// get config usage with wrapped flag usage and custom header string
+	u := cleanenv.Usage(&cfg, &customHeader, fset.Usage)
+
+	// print usage to STDERR
+	u()
+
+	//Output: Usage of Example:
+	//   -h string
+	//     	service host (default "localhost")
+	//   -p string
+	//     	service port (default "8080")
+	//
+	// My sweet variables:
+	//   ONE int64
+	//     	first parameter
+	//   TWO float64
+	//     	second parameter
+	//   THREE string
+	//     	third parameter
 }
