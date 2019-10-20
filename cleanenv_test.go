@@ -306,6 +306,13 @@ two = 2`,
 			}
 		})
 	}
+
+	t.Run("invalid path", func(t *testing.T) {
+		err := parseFile("invalid file path", nil)
+		if err == nil {
+			t.Error("expected error for invalid file path")
+		}
+	})
 }
 
 func TestParseFileEnv(t *testing.T) {
@@ -599,6 +606,113 @@ func TestFUsage(t *testing.T) {
 
 			if got != tt.want {
 				t.Errorf("wrong output %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestReadConfig(t *testing.T) {
+	type config struct {
+		Number    int64  `yaml:"number" env:"TEST_NUMBER" env-default:"1"`
+		String    string `yaml:"string" env:"TEST_STRING" env-default:"default"`
+		NoDefault string `yaml:"no-default" env:"TEST_NO_DEFAULT"`
+	}
+
+	tests := []struct {
+		name    string
+		file    string
+		ext     string
+		env     map[string]string
+		want    *config
+		wantErr bool
+	}{
+		{
+			name: "yaml_only",
+			file: `
+number: 2
+string: test
+no-default: NoDefault
+`,
+			ext: "yaml",
+			env: nil,
+			want: &config{
+				Number:    1,
+				String:    "default",
+				NoDefault: "NoDefault",
+			},
+			wantErr: false,
+		},
+
+		{
+			name: "env_only",
+			file: "none: none",
+			ext:  "yaml",
+			env: map[string]string{
+				"TEST_NUMBER": "2",
+				"TEST_STRING": "test",
+			},
+			want: &config{
+				Number:    2,
+				String:    "test",
+				NoDefault: "",
+			},
+			wantErr: false,
+		},
+
+		{
+			name: "empty",
+			file: "none: none",
+			ext:  "yaml",
+			env:  nil,
+			want: &config{
+				Number:    1,
+				String:    "default",
+				NoDefault: "",
+			},
+			wantErr: false,
+		},
+
+		{
+			name:    "unknown",
+			file:    "-",
+			ext:     "",
+			want:    nil,
+			wantErr: true,
+		},
+
+		{
+			name:    "parsing error",
+			file:    "-",
+			ext:     "json",
+			want:    nil,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpFile, err := ioutil.TempFile(os.TempDir(), fmt.Sprintf("*.%s", tt.ext))
+			if err != nil {
+				t.Fatal("cannot create temporary file:", err)
+			}
+			defer os.Remove(tmpFile.Name())
+
+			text := []byte(tt.file)
+			if _, err = tmpFile.Write(text); err != nil {
+				t.Fatal("failed to write to temporary file:", err)
+			}
+
+			for env, val := range tt.env {
+				os.Setenv(env, val)
+			}
+			defer os.Clearenv()
+
+			var cfg config
+			if err = ReadConfig(tmpFile.Name(), &cfg); (err != nil) != tt.wantErr {
+				t.Errorf("wrong error behavior %v, wantErr %v", err, tt.wantErr)
+			}
+			if err == nil && !reflect.DeepEqual(&cfg, tt.want) {
+				t.Errorf("wrong data %v, want %v", &cfg, tt.want)
 			}
 		})
 	}
