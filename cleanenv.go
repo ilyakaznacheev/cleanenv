@@ -32,7 +32,7 @@ import (
 )
 
 const (
-	// DefaultSeparator is a defauld list and map separator character
+	// DefaultSeparator is a default list and map separator character
 	DefaultSeparator = ","
 )
 
@@ -165,7 +165,7 @@ func parseENV(r io.Reader, str interface{}) error {
 	return nil
 }
 
-// structMeta is a strucrute metadata entity
+// structMeta is a structure metadata entity
 type structMeta struct {
 	envList     []string
 	fieldValue  reflect.Value
