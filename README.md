@@ -29,8 +29,11 @@ This is a simple configuration reading tool. It just does the following:
     - [Custom Value Setter](#custom-value-setter)
     - [Custom Value Update](#custom-value-update)
 - [Supported File Formats](#supported-file-formats)
+- [Integration](#integration)
+    - [Flag](#flag)
 - [Examples](#examples)
 - [Contribution](#contribution)
+- [Thanks](#thanks)
 
 ## Installation
 
@@ -221,6 +224,27 @@ There are several most popular config file formats supported:
 - JSON
 - TOML
 - ENV
+
+## Integration
+
+Package can be used with many other solutions. To make it more useful, we made some helpers.
+
+### Flag
+
+You can use the cleanenv help together with Golang `flag` package.
+
+```go
+// create some config structure
+var cfg config 
+
+// create flag set using `flag` package
+fset := flag.NewFlagSet("Example", flag.ContinueOnError)
+
+// get config usage with wrapped flag usage
+fset.Usage := cleanenv.FUsage(fset.Output(), &cfg, nil, fset.Usage)
+
+fset.Parse(os.Args[1:])
+```
 
 ## Examples
 
