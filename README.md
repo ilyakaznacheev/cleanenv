@@ -108,11 +108,11 @@ if err != nil {
 
 Some environment variables may change during the application run. To get the new values you need to mark these variables as updatable with the tag `env-upd` and then run the update function:
 
-```go 
+```go
 import github.com/ilyakaznacheev/cleanenv
 
 type ConfigRemote struct {
-	Port     string `env:"PORT" env-upd`
+    Port     string `env:"PORT" env-upd`
     Host     string `env:"HOST" env-upd`
     UserName string `env:"USERNAME"`
 }
@@ -209,7 +209,7 @@ type Config struct {
 func (c *Config) Update() error {
     newField, err := SomeCustomUpdate()
     f.Field = newField
-	return err
+    return err
 }
 ```
 
@@ -226,8 +226,8 @@ There are several most popular config file formats supported:
 
 ```go
 type Config struct {
-	Port string `yml:"port" env:"PORT" env-default:"8080"`
-	Host string `yml:"host" env:"HOST" env-default:"localhost"`
+    Port string `yml:"port" env:"PORT" env-default:"8080"`
+    Host string `yml:"host" env:"HOST" env-default:"localhost"`
 }
 
 var cfg Config
