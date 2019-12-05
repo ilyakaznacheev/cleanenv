@@ -29,8 +29,11 @@ This is a simple configuration reading tool. It just does the following:
     - [Custom Value Setter](#custom-value-setter)
     - [Custom Value Update](#custom-value-update)
 - [Supported File Formats](#supported-file-formats)
+- [Integration](#integration)
+    - [Flag](#flag)
 - [Examples](#examples)
 - [Contribution](#contribution)
+- [Thanks](#thanks)
 
 ## Installation
 
@@ -60,11 +63,11 @@ You can read a configuration file and environment variables in a single function
 import github.com/ilyakaznacheev/cleanenv
 
 type ConfigDatabase struct {
-	Port     string `yml:"port" env:"PORT" env-default:"5432"`
-	Host     string `yml:"host" env:"HOST" env-default:"localhost"`
-	Name     string `yml:"name" env:"NAME" env-default:"postgres"`
-	User     string `yml:"user" env:"USER" env-default:"user"`
-	Password string `yml:"password" env:"PASSWORD"`
+    Port     string `yml:"port" env:"PORT" env-default:"5432"`
+    Host     string `yml:"host" env:"HOST" env-default:"localhost"`
+    Name     string `yml:"name" env:"NAME" env-default:"postgres"`
+    User     string `yml:"user" env:"USER" env-default:"user"`
+    Password string `yml:"password" env:"PASSWORD"`
 }
 
 var cfg ConfigDatabase
@@ -89,11 +92,11 @@ Sometimes you don't want to use configuration files at all, or you may want to u
 import github.com/ilyakaznacheev/cleanenv
 
 type ConfigDatabase struct {
-	Port     string `env:"PORT" env-default:"5432"`
-	Host     string `env:"HOST" env-default:"localhost"`
-	Name     string `env:"NAME" env-default:"postgres"`
-	User     string `env:"USER" env-default:"user"`
-	Password string `env:"PASSWORD"`
+    Port     string `env:"PORT" env-default:"5432"`
+    Host     string `env:"HOST" env-default:"localhost"`
+    Name     string `env:"NAME" env-default:"postgres"`
+    User     string `env:"USER" env-default:"user"`
+    Password string `env:"PASSWORD"`
 }
 
 var cfg ConfigDatabase
@@ -181,11 +184,11 @@ To make custom type allows to set the value from the environment variable, you n
 type MyField string
 
 func (f MyField) SetValue(s string) error  {
-	if s == "" {
-		return fmt.Errorf("field value can't be empty")
-	}
-	f = MyField("my field is: "+ s)
-	return nil
+    if s == "" {
+        return fmt.Errorf("field value can't be empty")
+    }
+    f = MyField("my field is: "+ s)
+    return nil
 }
 
 type Config struct {
@@ -203,7 +206,7 @@ Thus, you need to implement the `Updater` interface on the structure level:
 
 ```go
 type Config struct {
-	Field string
+    Field string
 }
 
 func (c *Config) Update() error {
@@ -221,6 +224,27 @@ There are several most popular config file formats supported:
 - JSON
 - TOML
 - ENV
+
+## Integration
+
+Package can be used with many other solutions. To make it more useful, we made some helpers.
+
+### Flag
+
+You can use the cleanenv help together with Golang `flag` package.
+
+```go
+// create some config structure
+var cfg config 
+
+// create flag set using `flag` package
+fset := flag.NewFlagSet("Example", flag.ContinueOnError)
+
+// get config usage with wrapped flag usage
+fset.Usage := cleanenv.FUsage(fset.Output(), &cfg, nil, fset.Usage)
+
+fset.Parse(os.Args[1:])
+```
 
 ## Examples
 
