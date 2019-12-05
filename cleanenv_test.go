@@ -96,6 +96,115 @@ func TestReadEnvVars(t *testing.T) {
 			},
 			wantErr: false,
 		},
+
+		{
+			name: "wrong types",
+			env: map[string]string{
+				"TEST_INTEGER":         "a",
+				"TEST_UNSINTEGER":      "b",
+				"TEST_FLOAT":           "c",
+				"TEST_BOOLEAN":         "xxx",
+				"TEST_STRING":          "",
+				"TEST_DURATION":        "-",
+				"TEST_ARRAYINT":        "a,b,c",
+				"TEST_ARRAYSTRING":     "1,2,3",
+				"TEST_MAPSTRINGINT":    "a:x,b:y,c:z",
+				"TEST_MAPSTRINGSTRING": "a:1,b:2,c:3",
+			},
+			cfg:     &AllTypes{},
+			want:    &AllTypes{},
+			wantErr: true,
+		},
+
+		{
+			name: "wrong int",
+			env: map[string]string{
+				"TEST_INTEGER": "a",
+			},
+			cfg:     &AllTypes{},
+			want:    &AllTypes{},
+			wantErr: true,
+		},
+
+		{
+			name: "wrong uint",
+			env: map[string]string{
+				"TEST_UNSINTEGER": "b",
+			},
+			cfg:     &AllTypes{},
+			want:    &AllTypes{},
+			wantErr: true,
+		},
+
+		{
+			name: "wrong float",
+			env: map[string]string{
+				"TEST_FLOAT": "c",
+			},
+			cfg:     &AllTypes{},
+			want:    &AllTypes{},
+			wantErr: true,
+		},
+
+		{
+			name: "wrong boolean",
+			env: map[string]string{
+				"TEST_BOOLEAN": "xxx",
+			},
+			cfg:     &AllTypes{},
+			want:    &AllTypes{},
+			wantErr: true,
+		},
+
+		{
+			name: "wrong duration",
+			env: map[string]string{
+				"TEST_DURATION": "-",
+			},
+			cfg:     &AllTypes{},
+			want:    &AllTypes{},
+			wantErr: true,
+		},
+
+		{
+			name: "wrong array int",
+			env: map[string]string{
+				"TEST_ARRAYINT": "a,b,c",
+			},
+			cfg:     &AllTypes{},
+			want:    &AllTypes{},
+			wantErr: true,
+		},
+
+		{
+			name: "wrong map int",
+			env: map[string]string{
+				"TEST_MAPSTRINGINT": "a:x,b:y,c:z",
+			},
+			cfg:     &AllTypes{},
+			want:    &AllTypes{},
+			wantErr: true,
+		},
+
+		{
+			name: "wrong map type int",
+			env: map[string]string{
+				"TEST_MAPSTRINGINT": "-",
+			},
+			cfg:     &AllTypes{},
+			want:    &AllTypes{},
+			wantErr: true,
+		},
+
+		{
+			name: "wrong map type string",
+			env: map[string]string{
+				"TEST_MAPSTRINGSTRING": "-",
+			},
+			cfg:     &AllTypes{},
+			want:    &AllTypes{},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
