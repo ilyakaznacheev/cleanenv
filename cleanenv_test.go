@@ -2,6 +2,7 @@ package cleanenv
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -10,10 +11,23 @@ import (
 	"time"
 )
 
+type testUpdater struct {
+	Data string `env:"DATA"`
+	err  error
+}
+
+func (t *testUpdater) Update() error {
+	return t.err
+}
+
 func TestReadEnvVars(t *testing.T) {
 	durationFunc := func(s string) time.Duration {
 		d, _ := time.ParseDuration(s)
 		return d
+	}
+
+	ta := &testUpdater{
+		err: errors.New("test"),
 	}
 
 	type Combined struct {
@@ -203,6 +217,20 @@ func TestReadEnvVars(t *testing.T) {
 			},
 			cfg:     &AllTypes{},
 			want:    &AllTypes{},
+			wantErr: true,
+		},
+
+		{
+			name:    "wrong config type",
+			cfg:     42,
+			want:    42,
+			wantErr: true,
+		},
+
+		{
+			name:    "updater error",
+			cfg:     ta,
+			want:    ta,
 			wantErr: true,
 		},
 	}
