@@ -176,72 +176,78 @@ type structMeta struct {
 }
 
 // readStructMetadata reads structure metadata (types, tags, etc.)
-func readStructMetadata(cfg interface{}) ([]structMeta, error) {
-	s := reflect.ValueOf(cfg)
-
-	// unwrap pointer
-	if s.Kind() == reflect.Ptr {
-		s = s.Elem()
-	}
-
-	// process only structures
-	if s.Kind() != reflect.Struct {
-		return nil, fmt.Errorf("wrong type %v", s.Kind())
-	}
-	typeInfo := s.Type()
-
+func readStructMetadata(cfgRoot interface{}) ([]structMeta, error) {
+	cfgStack := []interface{}{cfgRoot}
 	metas := make([]structMeta, 0)
 
-	// read tags
-	for idx := 0; idx < s.NumField(); idx++ {
-		fType := typeInfo.Field(idx)
+	for i := 0; i < len(cfgStack); i++ {
 
-		var (
-			defValue  *string
-			separator string
-		)
+		s := reflect.ValueOf(cfgStack[i])
 
-		// process nested structure
-		if fld := s.Field(idx); fld.Kind() == reflect.Struct {
-			subMeta, err := readStructMetadata(fld.Addr().Interface())
-			if err != nil {
-				return nil, err
+		// unwrap pointer
+		if s.Kind() == reflect.Ptr {
+			s = s.Elem()
+		}
+
+		// process only structures
+		if s.Kind() != reflect.Struct {
+			return nil, fmt.Errorf("wrong type %v", s.Kind())
+		}
+		typeInfo := s.Type()
+
+		// read tags
+		for idx := 0; idx < s.NumField(); idx++ {
+			fType := typeInfo.Field(idx)
+
+			var (
+				defValue  *string
+				separator string
+			)
+
+			// process nested structure
+			if fld := s.Field(idx); fld.Kind() == reflect.Struct {
+				// subMeta, err := readStructMetadata(fld.Addr().Interface())
+				// if err != nil {
+				// 	return nil, err
+				// }
+				// metas = append(metas, subMeta...)
+				cfgStack = append(cfgStack, fld.Addr().Interface())
+				continue
 			}
-			metas = append(metas, subMeta...)
-			continue
+
+			// check is the field value can be changed
+			if !s.Field(idx).CanSet() {
+				continue
+			}
+
+			if def, ok := fType.Tag.Lookup("env-default"); ok {
+				defValue = &def
+			}
+
+			if sep, ok := fType.Tag.Lookup("env-separator"); ok {
+				separator = sep
+			} else {
+				separator = DefaultSeparator
+			}
+
+			_, upd := fType.Tag.Lookup("env-upd")
+
+			envList := make([]string, 0)
+
+			if envs, ok := fType.Tag.Lookup("env"); ok && len(envs) != 0 {
+				envList = strings.Split(envs, DefaultSeparator)
+			}
+
+			metas = append(metas, structMeta{
+				envList:     envList,
+				fieldValue:  s.Field(idx),
+				defValue:    defValue,
+				separator:   separator,
+				description: fType.Tag.Get("env-description"),
+				updatable:   upd,
+			})
 		}
 
-		// check is the field value can be changed
-		if !s.Field(idx).CanSet() {
-			continue
-		}
-
-		if def, ok := fType.Tag.Lookup("env-default"); ok {
-			defValue = &def
-		}
-
-		if sep, ok := fType.Tag.Lookup("env-separator"); ok {
-			separator = sep
-		} else {
-			separator = DefaultSeparator
-		}
-
-		_, upd := fType.Tag.Lookup("env-upd")
-
-		envList := make([]string, 0)
-
-		if envs, ok := fType.Tag.Lookup("env"); ok && len(envs) != 0 {
-			envList = strings.Split(envs, DefaultSeparator)
-		}
-
-		metas = append(metas, structMeta{
-			envList:     envList,
-			fieldValue:  s.Field(idx),
-			defValue:    defValue,
-			separator:   separator,
-			description: fType.Tag.Get("env-description"),
-			updatable:   upd,
-		})
 	}
 
 	return metas, nil
@@ -290,6 +296,7 @@ func readEnvVars(cfg interface{}, update bool) error {
 // parseValue parses value into the corresponding field.
 // In case of maps and slices it uses provided separator to split raw value string
 func parseValue(field reflect.Value, value, sep string) error {
+	// TODO: simplify recursion
 
 	if field.CanInterface() {
 		if cs, ok := field.Interface().(Setter); ok {
@@ -308,96 +315,114 @@ func parseValue(field reflect.Value, value, sep string) error {
 
 	// parse boolean value
 	case reflect.Bool:
-		if b, err := strconv.ParseBool(value); err != nil {
+		b, err := strconv.ParseBool(value)
+		if err != nil {
 			return err
-		} else {
-			field.SetBool(b)
 		}
+		field.SetBool(b)
 
 	// parse integer (or time) value
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		if field.Kind() == reflect.Int64 && valueType.PkgPath() == "time" && valueType.Name() == "Duration" {
 			// try to parse time
-			if d, err := time.ParseDuration(value); err != nil {
+			d, err := time.ParseDuration(value)
+			if err != nil {
 				return err
-			} else {
-				field.SetInt(int64(d))
 			}
+			field.SetInt(int64(d))
+
 		} else {
 			// parse regular integer
-			if number, err := strconv.ParseInt(value, 0, valueType.Bits()); err != nil {
+			number, err := strconv.ParseInt(value, 0, valueType.Bits())
+			if err != nil {
 				return err
-			} else {
-				field.SetInt(number)
 			}
+			field.SetInt(number)
 		}
 
 	// parse unsigned integer value
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		if number, err := strconv.ParseUint(value, 0, valueType.Bits()); err != nil {
+		number, err := strconv.ParseUint(value, 0, valueType.Bits())
+		if err != nil {
 			return err
-		} else {
-			field.SetUint(number)
 		}
+		field.SetUint(number)
 
 	// parse floating point value
 	case reflect.Float32, reflect.Float64:
-		if number, err := strconv.ParseFloat(value, valueType.Bits()); err != nil {
+		number, err := strconv.ParseFloat(value, valueType.Bits())
+		if err != nil {
 			return err
-		} else {
-			field.SetFloat(number)
 		}
+		field.SetFloat(number)
 
 	// parse sliced value
 	case reflect.Slice:
-		sliceValue := reflect.MakeSlice(valueType, 0, 0)
-
-		if valueType.Elem().Kind() == reflect.Uint8 {
-			sliceValue = reflect.ValueOf([]byte(value))
-		} else if len(strings.TrimSpace(value)) != 0 {
-			values := strings.Split(value, sep)
-			sliceValue = reflect.MakeSlice(valueType, len(values), len(values))
-
-			for i, val := range values {
-				if err := parseValue(sliceValue.Index(i), val, sep); err != nil {
-					return err
-				}
-			}
+		sliceValue, err := parseSlice(valueType, value, sep)
+		if err != nil {
+			return err
 		}
 
-		field.Set(sliceValue)
+		field.Set(*sliceValue)
 
 	// parse mapped value
 	case reflect.Map:
-		mapValue := reflect.MakeMap(valueType)
-		if len(strings.TrimSpace(value)) != 0 {
-			pairs := strings.Split(value, sep)
-			for _, pair := range pairs {
-				kvPair := strings.Split(pair, ":")
-				if len(kvPair) != 2 {
-					return fmt.Errorf("invalid map item: %q", pair)
-				}
-				k := reflect.New(valueType.Key()).Elem()
-				err := parseValue(k, kvPair[0], sep)
-				if err != nil {
-					return err
-				}
-				v := reflect.New(valueType.Elem()).Elem()
-				err = parseValue(v, kvPair[1], sep)
-				if err != nil {
-					return err
-				}
-				mapValue.SetMapIndex(k, v)
-			}
+		mapValue, err := parseMap(valueType, value, sep)
+		if err != nil {
+			return err
 		}
 
-		field.Set(mapValue)
+		field.Set(*mapValue)
 
 	default:
 		return fmt.Errorf("unsupported type %s.%s", valueType.PkgPath(), valueType.Name())
 	}
 
 	return nil
+}
+
+// parseSlice parses value into a slice of given type
+func parseSlice(valueType reflect.Type, value string, sep string) (*reflect.Value, error) {
+	sliceValue := reflect.MakeSlice(valueType, 0, 0)
+	if valueType.Elem().Kind() == reflect.Uint8 {
+		sliceValue = reflect.ValueOf([]byte(value))
+	} else if len(strings.TrimSpace(value)) != 0 {
+		values := strings.Split(value, sep)
+		sliceValue = reflect.MakeSlice(valueType, len(values), len(values))
+
+		for i, val := range values {
+			if err := parseValue(sliceValue.Index(i), val, sep); err != nil {
+				return nil, err
+			}
+		}
+	}
+	return &sliceValue, nil
+}
+
+// parseMap parses value into a map of given type
+func parseMap(valueType reflect.Type, value string, sep string) (*reflect.Value, error) {
+	mapValue := reflect.MakeMap(valueType)
+	if len(strings.TrimSpace(value)) != 0 {
+		pairs := strings.Split(value, sep)
+		for _, pair := range pairs {
+			kvPair := strings.Split(pair, ":")
+			if len(kvPair) != 2 {
+				return nil, fmt.Errorf("invalid map item: %q", pair)
+			}
+			k := reflect.New(valueType.Key()).Elem()
+			err := parseValue(k, kvPair[0], sep)
+			if err != nil {
+				return nil, err
+			}
+			v := reflect.New(valueType.Elem()).Elem()
+			err = parseValue(v, kvPair[1], sep)
+			if err != nil {
+				return nil, err
+			}
+			mapValue.SetMapIndex(k, v)
+		}
+	}
+	return &mapValue, nil
 }
 
 // GetDescription returns a description of environment variables.
