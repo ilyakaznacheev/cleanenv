@@ -27,6 +27,7 @@ type Config struct {
 	Greeting string `env:"GREETING" env-description:"Greeting phrase" env-default:"Hello!"`
 }
 
+// Args command-line parameters
 type Args struct {
 	ConfigPath string
 }
