@@ -1,3 +1,5 @@
+![Clean Env](logo.png)
+
 # Clean Env
 
 Minimalistic configuration reader
