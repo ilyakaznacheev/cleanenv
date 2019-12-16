@@ -243,7 +243,7 @@ var cfg config
 fset := flag.NewFlagSet("Example", flag.ContinueOnError)
 
 // get config usage with wrapped flag usage
-fset.Usage := cleanenv.FUsage(fset.Output(), &cfg, nil, fset.Usage)
+fset.Usage = cleanenv.FUsage(fset.Output(), &cfg, nil, fset.Usage)
 
 fset.Parse(os.Args[1:])
 ```
@@ -279,3 +279,9 @@ Any contribution is welcome.
 ## Thanks
 
 Big thanks to a project [kelseyhightower/envconfig](https://github.com/kelseyhightower/envconfig) for inspiration.
+
+The logo was made by [alexchoffy](https://www.instagram.com/alexchoffy/).
+
+## Blog Posts
+
+[Clean Configuration Management in Golang](https://dev.to/ilyakaznacheev/clean-configuration-management-in-golang-1c89).
