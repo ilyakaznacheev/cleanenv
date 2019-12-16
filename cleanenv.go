@@ -170,6 +170,7 @@ type structMeta struct {
 	envList     []string
 	fieldValue  reflect.Value
 	defValue    *string
+	layout      *string
 	separator   string
 	description string
 	updatable   bool
@@ -201,18 +202,21 @@ func readStructMetadata(cfgRoot interface{}) ([]structMeta, error) {
 
 			var (
 				defValue  *string
+				layout    *string
 				separator string
 			)
 
-			// process nested structure
+			// process nested structure (except of time.Time)
 			if fld := s.Field(idx); fld.Kind() == reflect.Struct {
-				// subMeta, err := readStructMetadata(fld.Addr().Interface())
-				// if err != nil {
-				// 	return nil, err
-				// }
-				// metas = append(metas, subMeta...)
-				cfgStack = append(cfgStack, fld.Addr().Interface())
-				continue
+				// add structure to parsing stack
+				if fld.Type() != reflect.TypeOf(time.Time{}) {
+					cfgStack = append(cfgStack, fld.Addr().Interface())
+					continue
+				}
+				// process time.Time
+				if l, ok := fType.Tag.Lookup("env-layout"); ok {
+					layout = &l
+				}
 			}
 
 			// check is the field value can be changed
@@ -242,6 +246,7 @@ func readStructMetadata(cfgRoot interface{}) ([]structMeta, error) {
 				envList:     envList,
 				fieldValue:  s.Field(idx),
 				defValue:    defValue,
+				layout:      layout,
 				separator:   separator,
 				description: fType.Tag.Get("env-description"),
 				updatable:   upd,
@@ -285,7 +290,7 @@ func readEnvVars(cfg interface{}, update bool) error {
 			continue
 		}
 
-		if err := parseValue(meta.fieldValue, *rawValue, meta.separator); err != nil {
+		if err := parseValue(meta.fieldValue, *rawValue, meta.separator, meta.layout); err != nil {
 			return err
 		}
 	}
@@ -295,7 +300,7 @@ func readEnvVars(cfg interface{}, update bool) error {
 
 // parseValue parses value into the corresponding field.
 // In case of maps and slices it uses provided separator to split raw value string
-func parseValue(field reflect.Value, value, sep string) error {
+func parseValue(field reflect.Value, value, sep string, layout *string) error {
 	// TODO: simplify recursion
 
 	if field.CanInterface() {
@@ -358,7 +363,7 @@ func parseValue(field reflect.Value, value, sep string) error {
 
 	// parse sliced value
 	case reflect.Slice:
-		sliceValue, err := parseSlice(valueType, value, sep)
+		sliceValue, err := parseSlice(valueType, value, sep, layout)
 		if err != nil {
 			return err
 		}
@@ -367,12 +372,29 @@ func parseValue(field reflect.Value, value, sep string) error {
 
 	// parse mapped value
 	case reflect.Map:
-		mapValue, err := parseMap(valueType, value, sep)
+		mapValue, err := parseMap(valueType, value, sep, layout)
 		if err != nil {
 			return err
 		}
 
 		field.Set(*mapValue)
+
+	case reflect.Struct:
+		// process time.Time only
+		if valueType.PkgPath() == "time" && valueType.Name() == "Time" {
+
+			var l string
+			if layout != nil {
+				l = *layout
+			} else {
+				l = time.RFC3339
+			}
+			val, err := time.Parse(l, value)
+			if err != nil {
+				return err
+			}
+			field.Set(reflect.ValueOf(val))
+		}
 
 	default:
 		return fmt.Errorf("unsupported type %s.%s", valueType.PkgPath(), valueType.Name())
@@ -382,7 +404,7 @@ func parseValue(field reflect.Value, value, sep string) error {
 }
 
 // parseSlice parses value into a slice of given type
-func parseSlice(valueType reflect.Type, value string, sep string) (*reflect.Value, error) {
+func parseSlice(valueType reflect.Type, value string, sep string, layout *string) (*reflect.Value, error) {
 	sliceValue := reflect.MakeSlice(valueType, 0, 0)
 	if valueType.Elem().Kind() == reflect.Uint8 {
 		sliceValue = reflect.ValueOf([]byte(value))
@@ -391,7 +413,7 @@ func parseSlice(valueType reflect.Type, value string, sep string) (*reflect.Valu
 		sliceValue = reflect.MakeSlice(valueType, len(values), len(values))
 
 		for i, val := range values {
-			if err := parseValue(sliceValue.Index(i), val, sep); err != nil {
+			if err := parseValue(sliceValue.Index(i), val, sep, layout); err != nil {
 				return nil, err
 			}
 		}
@@ -400,22 +422,22 @@ func parseSlice(valueType reflect.Type, value string, sep string) (*reflect.Valu
 }
 
 // parseMap parses value into a map of given type
-func parseMap(valueType reflect.Type, value string, sep string) (*reflect.Value, error) {
+func parseMap(valueType reflect.Type, value string, sep string, layout *string) (*reflect.Value, error) {
 	mapValue := reflect.MakeMap(valueType)
 	if len(strings.TrimSpace(value)) != 0 {
 		pairs := strings.Split(value, sep)
 		for _, pair := range pairs {
-			kvPair := strings.Split(pair, ":")
+			kvPair := strings.SplitN(pair, ":", 2)
 			if len(kvPair) != 2 {
 				return nil, fmt.Errorf("invalid map item: %q", pair)
 			}
 			k := reflect.New(valueType.Key()).Elem()
-			err := parseValue(k, kvPair[0], sep)
+			err := parseValue(k, kvPair[0], sep, layout)
 			if err != nil {
 				return nil, err
 			}
 			v := reflect.New(valueType.Elem()).Elem()
-			err = parseValue(v, kvPair[1], sep)
+			err = parseValue(v, kvPair[1], sep, layout)
 			if err != nil {
 				return nil, err
 			}
