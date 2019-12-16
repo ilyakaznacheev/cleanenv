@@ -17,6 +17,7 @@ This is a simple configuration reading tool. It just does the following:
 
 - reads and parses configuration structure from the file
 - reads and overwrites configuration structure from environment variables
+- writes a detailed variable list to help output
 
 ## Content
 
