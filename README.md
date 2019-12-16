@@ -1,4 +1,4 @@
-![Clean Env](logo.png)
+![Clean Env](logo.svg)
 
 # Clean Env
 
