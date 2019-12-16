@@ -22,8 +22,19 @@ func (t *testUpdater) Update() error {
 
 func TestReadEnvVars(t *testing.T) {
 	durationFunc := func(s string) time.Duration {
-		d, _ := time.ParseDuration(s)
+		d, err := time.ParseDuration(s)
+		if err != nil {
+			t.Fatal(err)
+		}
 		return d
+	}
+
+	timeFunc := func(s, l string) time.Time {
+		tm, err := time.Parse(l, s)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return tm
 	}
 
 	ta := &testUpdater{
@@ -44,10 +55,21 @@ func TestReadEnvVars(t *testing.T) {
 		Boolean         bool              `env:"TEST_BOOLEAN"`
 		String          string            `env:"TEST_STRING"`
 		Duration        time.Duration     `env:"TEST_DURATION"`
+		Time            time.Time         `env:"TEST_TIME"`
 		ArrayInt        []int             `env:"TEST_ARRAYINT"`
 		ArrayString     []string          `env:"TEST_ARRAYSTRING"`
 		MapStringInt    map[string]int    `env:"TEST_MAPSTRINGINT"`
 		MapStringString map[string]string `env:"TEST_MAPSTRINGSTRING"`
+	}
+
+	type TimeTypes struct {
+		Time1 time.Time            `env:"TEST_TIME1"`
+		Time2 time.Time            `env:"TEST_TIME2" env-layout:"Mon Jan _2 15:04:05 2006"`
+		Time3 time.Time            `env:"TEST_TIME3" env-layout:"Jan _2 15:04:05"`
+		Time4 time.Time            `env:"TEST_TIME4" env-default:"2012-04-23T18:25:43.511Z"`
+		Time5 time.Time            `env:"TEST_TIME5" env-default:"Mon Mar 10 11:11:11 2011" env-layout:"Mon Jan _2 15:04:05 2006"`
+		Time6 []time.Time          `env:"TEST_TIME6" env-separator:"|"`
+		Time7 map[string]time.Time `env:"TEST_TIME7" env-separator:"|"`
 	}
 
 	tests := []struct {
@@ -82,6 +104,7 @@ func TestReadEnvVars(t *testing.T) {
 				"TEST_BOOLEAN":         "true",
 				"TEST_STRING":          "test",
 				"TEST_DURATION":        "1h5m10s",
+				"TEST_TIME":            "2012-04-23T18:25:43.511Z",
 				"TEST_ARRAYINT":        "1,2,3",
 				"TEST_ARRAYSTRING":     "a,b,c",
 				"TEST_MAPSTRINGINT":    "a:1,b:2,c:3",
@@ -95,6 +118,7 @@ func TestReadEnvVars(t *testing.T) {
 				Boolean:     true,
 				String:      "test",
 				Duration:    durationFunc("1h5m10s"),
+				Time:        timeFunc("2012-04-23T18:25:43.511Z", time.RFC3339),
 				ArrayInt:    []int{1, 2, 3},
 				ArrayString: []string{"a", "b", "c"},
 				MapStringInt: map[string]int{
@@ -106,6 +130,34 @@ func TestReadEnvVars(t *testing.T) {
 					"a": "x",
 					"b": "y",
 					"c": "z",
+				},
+			},
+			wantErr: false,
+		},
+
+		{
+			name: "times",
+			env: map[string]string{
+				"TEST_TIME1": "2012-04-23T18:25:43.511Z",
+				"TEST_TIME2": "Mon Mar 10 11:11:11 2011",
+				"TEST_TIME3": "Dec 1 11:11:11",
+				"TEST_TIME6": "2012-04-23T18:25:43.511Z|2012-05-23T18:25:43.511Z",
+				"TEST_TIME7": "a:2012-04-23T18:25:43.511Z|b:2012-05-23T18:25:43.511Z",
+			},
+			cfg: &TimeTypes{},
+			want: &TimeTypes{
+				Time1: timeFunc("2012-04-23T18:25:43.511Z", time.RFC3339),
+				Time2: timeFunc("Mon Mar 10 11:11:11 2011", time.ANSIC),
+				Time3: timeFunc("Dec 1 11:11:11", time.Stamp),
+				Time4: timeFunc("2012-04-23T18:25:43.511Z", time.RFC3339),
+				Time5: timeFunc("Mon Mar 10 11:11:11 2011", time.ANSIC),
+				Time6: []time.Time{
+					timeFunc("2012-04-23T18:25:43.511Z", time.RFC3339),
+					timeFunc("2012-05-23T18:25:43.511Z", time.RFC3339),
+				},
+				Time7: map[string]time.Time{
+					"a": timeFunc("2012-04-23T18:25:43.511Z", time.RFC3339),
+					"b": timeFunc("2012-05-23T18:25:43.511Z", time.RFC3339),
 				},
 			},
 			wantErr: false,
@@ -232,6 +284,56 @@ func TestReadEnvVars(t *testing.T) {
 			cfg:     ta,
 			want:    ta,
 			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			for env, val := range tt.env {
+				os.Setenv(env, val)
+			}
+			defer os.Clearenv()
+
+			if err := readEnvVars(tt.cfg, false); (err != nil) != tt.wantErr {
+				t.Errorf("wrong error behavior %v, wantErr %v", err, tt.wantErr)
+			}
+			if !reflect.DeepEqual(tt.cfg, tt.want) {
+				t.Errorf("wrong data %v, want %v", tt.cfg, tt.want)
+			}
+		})
+	}
+}
+
+func TestReadEnvVarsTime(t *testing.T) {
+	timeFunc := func(s, l string) time.Time {
+		tm, err := time.Parse(l, s)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return tm
+	}
+
+	type Timed struct {
+		Time time.Time `env:"TEST_TIME" env-layout:"Mon Jan _2 15:04:05 2006"`
+	}
+
+	tests := []struct {
+		name    string
+		env     map[string]string
+		cfg     interface{}
+		want    interface{}
+		wantErr bool
+	}{
+		{
+			name: "time",
+			env: map[string]string{
+				"TEST_TIME": "Mon Mar 10 11:11:11 2011",
+			},
+			cfg: &Timed{},
+			want: &Timed{
+				Time: timeFunc("Mon Mar 10 11:11:11 2011", time.ANSIC),
+			},
+			wantErr: false,
 		},
 	}
 

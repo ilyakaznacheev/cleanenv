@@ -27,6 +27,7 @@ This is a simple configuration reading tool. It just does the following:
     - [Update Environment Variables](#update-environment-variables)
     - [Description](#description)
 - [Model Format](#model-format)
+- [Supported types](#supported-types)
 - [Custom Functions](#custom-functions)
     - [Custom Value Setter](#custom-value-setter)
     - [Custom Value Update](#custom-value-update)
@@ -172,7 +173,23 @@ Library uses tags to configure model of configuration structure. There are follo
 - `env-upd` - flag to mark a field as updatable. Run `UpdateEnv(&cfg)` to refresh updatable variables from environment;
 - `env-default="<value>"` - default value. If the field wasn't filled from the environment variable default value will be used instead;
 - `env-separator="<value>"` - custom list and map separator. If not set, the default separator `,` will be used;
-- `env-description="<value>"` - environment variable description.
+- `env-description="<value>"` - environment variable description;
+- `env-layout="<value>"` - parsing layout (for types like `time.Time`);
+
+## Supported types
+
+There are following supported types:
+
+- `int` (any kind);
+- `float` (any kind);
+- `string`;
+- `boolean`;
+- slices (of any other supported type);
+- maps (of any other supported type);
+- `time.Duration`;
+- `time.Time` (layout by default is RFC3339, may be overridden by `env-layout`);
+- any type implementing `cleanenv.Setter` interface.
+
 
 ## Custom Functions
 
