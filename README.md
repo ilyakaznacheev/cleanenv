@@ -68,11 +68,11 @@ You can read a configuration file and environment variables in a single function
 import github.com/ilyakaznacheev/cleanenv
 
 type ConfigDatabase struct {
-    Port     string `yml:"port" env:"PORT" env-default:"5432"`
-    Host     string `yml:"host" env:"HOST" env-default:"localhost"`
-    Name     string `yml:"name" env:"NAME" env-default:"postgres"`
-    User     string `yml:"user" env:"USER" env-default:"user"`
-    Password string `yml:"password" env:"PASSWORD"`
+    Port     string `yaml:"port" env:"PORT" env-default:"5432"`
+    Host     string `yaml:"host" env:"HOST" env-default:"localhost"`
+    Name     string `yaml:"name" env:"NAME" env-default:"postgres"`
+    User     string `yaml:"user" env:"USER" env-default:"user"`
+    Password string `yaml:"password" env:"PASSWORD"`
 }
 
 var cfg ConfigDatabase
@@ -204,7 +204,7 @@ To make custom type allows to set the value from the environment variable, you n
 ```go
 type MyField string
 
-func (f MyField) SetValue(s string) error  {
+func (f *MyField) SetValue(s string) error  {
     if s == "" {
         return fmt.Errorf("field value can't be empty")
     }
