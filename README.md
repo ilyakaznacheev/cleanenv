@@ -208,7 +208,7 @@ func (f *MyField) SetValue(s string) error  {
     if s == "" {
         return fmt.Errorf("field value can't be empty")
     }
-    f = MyField("my field is: "+ s)
+    *f = MyField("my field is: "+ s)
     return nil
 }
 
