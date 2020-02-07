@@ -4,8 +4,8 @@ Package cleanenv gives you a single tool to read application configuration from 
 You can just prepare config structure and fill it from the config file and environment variables.
 
 	type Config struct {
-		Port string `yml:"port" env:"PORT" env-default:"8080"`
-		Host string `yml:"host" env:"HOST" env-default:"localhost"`
+		Port string `yaml:"port" env:"PORT" env-default:"8080"`
+		Host string `yaml:"host" env:"HOST" env-default:"localhost"`
 	}
 
 	var cfg Config
@@ -64,11 +64,11 @@ type Updater interface {
 // Example:
 //
 //	 type ConfigDatabase struct {
-//	 	Port     string `yml:"port" env:"PORT" env-default:"5432"`
-//	 	Host     string `yml:"host" env:"HOST" env-default:"localhost"`
-//	 	Name     string `yml:"name" env:"NAME" env-default:"postgres"`
-//	 	User     string `yml:"user" env:"USER" env-default:"user"`
-//	 	Password string `yml:"password" env:"PASSWORD"`
+//	 	Port     string `yaml:"port" env:"PORT" env-default:"5432"`
+//	 	Host     string `yaml:"host" env:"HOST" env-default:"localhost"`
+//	 	Name     string `yaml:"name" env:"NAME" env-default:"postgres"`
+//	 	User     string `yaml:"user" env:"USER" env-default:"user"`
+//	 	Password string `yaml:"password" env:"PASSWORD"`
 //	 }
 //
 //	 var cfg ConfigDatabase
@@ -153,7 +153,7 @@ func parseTOML(r io.Reader, str interface{}) error {
 // parseENV, in fact, doesn't fill the structure with environment variable values.
 // It just parses ENV file and sets all variables to the environment.
 // Thus, the structure should be filled at the next steps.
-func parseENV(r io.Reader, str interface{}) error {
+func parseENV(r io.Reader, _ interface{}) error {
 	vars, err := godotenv.Parse(r)
 	if err != nil {
 		return err
