@@ -6,7 +6,8 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-
+	
+	"github.com/joho/godotenv"
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
@@ -45,6 +46,13 @@ func ConnectDB(host, port, user, password, name string, conn int) (*sql.DB, erro
 }
 
 func main() {
+	// loading .env configs first
+	err := godotenv.Load()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(2)
+	}
+
 	var cfg Config
 
 	args := ProcessArgs(&cfg)
