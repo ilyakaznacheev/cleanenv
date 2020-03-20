@@ -277,13 +277,17 @@ func readEnvVars(cfg interface{}, update bool) error {
 			continue
 		}
 
-		rawValue := meta.defValue
+		var rawValue *string
 
 		for _, env := range meta.envList {
 			if value, ok := os.LookupEnv(env); ok {
 				rawValue = &value
 				break
 			}
+		}
+
+		if rawValue == nil && meta.fieldValue.IsZero() {
+			rawValue = meta.defValue
 		}
 
 		if rawValue == nil {
