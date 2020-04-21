@@ -292,7 +292,7 @@ func readEnvVars(cfg interface{}, update bool) error {
 			}
 		}
 
-		if rawValue == nil && meta.fieldValue.IsZero() {
+		if rawValue == nil && meta.isFieldValueZero() {
 			rawValue = meta.defValue
 		}
 
@@ -542,7 +542,7 @@ func isZero(v reflect.Value) bool {
 		return math.Float64bits(real(c)) == 0 && math.Float64bits(imag(c)) == 0
 	case reflect.Array:
 		for i := 0; i < v.Len(); i++ {
-			if !v.Index(i).IsZero() {
+			if !isZero(v.Index(i)) {
 				return false
 			}
 		}
@@ -553,7 +553,7 @@ func isZero(v reflect.Value) bool {
 		return v.Len() == 0
 	case reflect.Struct:
 		for i := 0; i < v.NumField(); i++ {
-			if !v.Field(i).IsZero() {
+			if !isZero(v.Field(i)) {
 				return false
 			}
 		}
