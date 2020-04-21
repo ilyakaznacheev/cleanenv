@@ -855,6 +855,7 @@ func TestReadConfig(t *testing.T) {
 		Number    int64  `yaml:"number" env:"TEST_NUMBER" env-default:"1"`
 		String    string `yaml:"string" env:"TEST_STRING" env-default:"default"`
 		NoDefault string `yaml:"no-default" env:"TEST_NO_DEFAULT"`
+		NoEnv     string `yaml:"no-env" env-default:"default"`
 	}
 
 	tests := []struct {
@@ -871,13 +872,15 @@ func TestReadConfig(t *testing.T) {
 number: 2
 string: test
 no-default: NoDefault
+no-env: this
 `,
 			ext: "yaml",
 			env: nil,
 			want: &config{
-				Number:    1,
-				String:    "default",
+				Number:    2,
+				String:    "test",
 				NoDefault: "NoDefault",
+				NoEnv:     "this",
 			},
 			wantErr: false,
 		},
@@ -894,6 +897,29 @@ no-default: NoDefault
 				Number:    2,
 				String:    "test",
 				NoDefault: "",
+				NoEnv:     "default",
+			},
+			wantErr: false,
+		},
+
+		{
+			name: "yaml_and_env",
+			file: `
+number: 2
+string: test
+no-default: NoDefault
+no-env: this
+`,
+			ext: "yaml",
+			env: map[string]string{
+				"TEST_NUMBER": "3",
+				"TEST_STRING": "fromEnv",
+			},
+			want: &config{
+				Number:    3,
+				String:    "fromEnv",
+				NoDefault: "NoDefault",
+				NoEnv:     "this",
 			},
 			wantErr: false,
 		},
@@ -907,6 +933,7 @@ no-default: NoDefault
 				Number:    1,
 				String:    "default",
 				NoDefault: "",
+				NoEnv:     "default",
 			},
 			wantErr: false,
 		},
