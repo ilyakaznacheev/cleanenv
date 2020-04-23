@@ -245,6 +245,7 @@ There are several most popular config file formats supported:
 - JSON
 - TOML
 - ENV
+- EDN
 
 ## Integration
 
