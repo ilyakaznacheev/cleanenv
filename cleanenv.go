@@ -30,6 +30,7 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/joho/godotenv"
 	"gopkg.in/yaml.v2"
+	"olympos.io/encoding/edn"
 )
 
 const (
@@ -124,6 +125,8 @@ func parseFile(path string, cfg interface{}) error {
 		err = parseJSON(f, cfg)
 	case ".toml":
 		err = parseTOML(f, cfg)
+	case ".edn":
+		err = parseEDN(f, cfg)
 	case ".env":
 		err = parseENV(f, cfg)
 	default:
@@ -149,6 +152,11 @@ func parseJSON(r io.Reader, str interface{}) error {
 func parseTOML(r io.Reader, str interface{}) error {
 	_, err := toml.DecodeReader(r, str)
 	return err
+}
+
+// parseEDN parses EDN from reader to data structure
+func parseEDN(r io.Reader, str interface{}) error {
+	return edn.NewDecoder(r).Decode(str)
 }
 
 // parseENV, in fact, doesn't fill the structure with environment variable values.
