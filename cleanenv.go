@@ -109,6 +109,8 @@ func UpdateEnv(cfg interface{}) error {
 // - toml
 //
 // - env
+//
+// - edn
 func parseFile(path string, cfg interface{}) error {
 	// open the configuration file
 	f, err := os.OpenFile(path, os.O_RDONLY|os.O_SYNC, 0)
