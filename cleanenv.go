@@ -38,6 +38,24 @@ const (
 	DefaultSeparator = ","
 )
 
+// Supported tags
+const (
+	// Name of the environment variable or a list of names
+	TagEnv = "env"
+	// Value parsing layout (for types like time.Time)
+	TagEnvLayout = "env-layout"
+	// Default value
+	TagEnvDefault = "env-default"
+	// Custom list and map separator
+	TagEnvSeparator = "env-separator"
+	// Environment variable description
+	TagEnvDescription = "env-description"
+	// Flag to mark a field as updatable
+	TagEnvUpd = "env-upd"
+	// Flag to mark a field as required
+	TagEnvRequired = "env-required"
+)
+
 // Setter is an interface for a custom value setter.
 //
 // To implement a custom value setter you need to add a SetValue function to your type that will receive a string raw value:
@@ -232,7 +250,7 @@ func readStructMetadata(cfgRoot interface{}) ([]structMeta, error) {
 					continue
 				}
 				// process time.Time
-				if l, ok := fType.Tag.Lookup("env-layout"); ok {
+				if l, ok := fType.Tag.Lookup(TagEnvLayout); ok {
 					layout = &l
 				}
 			}
@@ -242,23 +260,23 @@ func readStructMetadata(cfgRoot interface{}) ([]structMeta, error) {
 				continue
 			}
 
-			if def, ok := fType.Tag.Lookup("env-default"); ok {
+			if def, ok := fType.Tag.Lookup(TagEnvDefault); ok {
 				defValue = &def
 			}
 
-			if sep, ok := fType.Tag.Lookup("env-separator"); ok {
+			if sep, ok := fType.Tag.Lookup(TagEnvSeparator); ok {
 				separator = sep
 			} else {
 				separator = DefaultSeparator
 			}
 
-			_, upd := fType.Tag.Lookup("env-upd")
+			_, upd := fType.Tag.Lookup(TagEnvUpd)
 
-			_, required := fType.Tag.Lookup("env-required")
+			_, required := fType.Tag.Lookup(TagEnvRequired)
 
 			envList := make([]string, 0)
 
-			if envs, ok := fType.Tag.Lookup("env"); ok && len(envs) != 0 {
+			if envs, ok := fType.Tag.Lookup(TagEnv); ok && len(envs) != 0 {
 				envList = strings.Split(envs, DefaultSeparator)
 			}
 
@@ -269,7 +287,7 @@ func readStructMetadata(cfgRoot interface{}) ([]structMeta, error) {
 				defValue:    defValue,
 				layout:      layout,
 				separator:   separator,
-				description: fType.Tag.Get("env-description"),
+				description: fType.Tag.Get(TagEnvDescription),
 				updatable:   upd,
 				required:    required,
 			})
