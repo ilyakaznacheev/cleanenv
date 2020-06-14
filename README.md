@@ -141,7 +141,7 @@ Here remote host and port may change in a distributed system architecture. Field
 
 ### Description
 
-You can get descriptions of all environment variables to use them in help documentation.
+You can get descriptions of all environment variables to use them in the help documentation.
 
 ```go
 import github.com/ilyakaznacheev/cleanenv
@@ -169,10 +169,11 @@ Environment variables:
 
 ## Model Format
 
-Library uses tags to configure model of configuration structure. There are following tags:
+Library uses tags to configure the model of configuration structure. There are the following tags:
 
 - `env="<name>"` - environment variable name (e.g. `env="PORT"`);
 - `env-upd` - flag to mark a field as updatable. Run `UpdateEnv(&cfg)` to refresh updatable variables from environment;
+- `env-required` - flag to mark a field as required. If set will return an error during environment parsing when the flagged as required field is empty (default Go value). Tag `env-default` is ignored in this case;
 - `env-default="<value>"` - default value. If the field wasn't filled from the environment variable default value will be used instead;
 - `env-separator="<value>"` - custom list and map separator. If not set, the default separator `,` will be used;
 - `env-description="<value>"` - environment variable description;
@@ -249,7 +250,7 @@ There are several most popular config file formats supported:
 
 ## Integration
 
-Package can be used with many other solutions. To make it more useful, we made some helpers.
+The package can be used with many other solutions. To make it more useful, we made some helpers.
 
 ### Flag
 

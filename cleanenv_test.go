@@ -72,6 +72,11 @@ func TestReadEnvVars(t *testing.T) {
 		Time7 map[string]time.Time `env:"TEST_TIME7" env-separator:"|"`
 	}
 
+	type Required struct {
+		NotRequired int `env:"NOT_REQUIRED"`
+		Required    int `env:"REQUIRED" env-required:"true"`
+	}
+
 	tests := []struct {
 		name    string
 		env     map[string]string
@@ -283,6 +288,13 @@ func TestReadEnvVars(t *testing.T) {
 			name:    "updater error",
 			cfg:     ta,
 			want:    ta,
+			wantErr: true,
+		},
+
+		{
+			name:    "required error",
+			cfg:     &Required{},
+			want:    &Required{},
 			wantErr: true,
 		},
 	}
