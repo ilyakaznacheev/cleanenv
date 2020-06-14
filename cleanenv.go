@@ -179,12 +179,14 @@ func parseENV(r io.Reader, _ interface{}) error {
 // structMeta is a structure metadata entity
 type structMeta struct {
 	envList     []string
+	fieldName   string
 	fieldValue  reflect.Value
 	defValue    *string
 	layout      *string
 	separator   string
 	description string
 	updatable   bool
+	required    bool
 }
 
 // isFieldValueZero determines if fieldValue empty or not
@@ -252,6 +254,8 @@ func readStructMetadata(cfgRoot interface{}) ([]structMeta, error) {
 
 			_, upd := fType.Tag.Lookup("env-upd")
 
+			_, required := fType.Tag.Lookup("env-required")
+
 			envList := make([]string, 0)
 
 			if envs, ok := fType.Tag.Lookup("env"); ok && len(envs) != 0 {
@@ -260,12 +264,14 @@ func readStructMetadata(cfgRoot interface{}) ([]structMeta, error) {
 
 			metas = append(metas, structMeta{
 				envList:     envList,
+				fieldName:   s.Type().Field(idx).Name,
 				fieldValue:  s.Field(idx),
 				defValue:    defValue,
 				layout:      layout,
 				separator:   separator,
 				description: fType.Tag.Get("env-description"),
 				updatable:   upd,
+				required:    required,
 			})
 		}
 
@@ -300,6 +306,12 @@ func readEnvVars(cfg interface{}, update bool) error {
 				rawValue = &value
 				break
 			}
+		}
+
+		if rawValue == nil && meta.required && meta.isFieldValueZero() {
+			err := fmt.Errorf("field %q is required but the value is not provided",
+				meta.fieldName)
+			return err
 		}
 
 		if rawValue == nil && meta.isFieldValueZero() {
