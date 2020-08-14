@@ -1,17 +1,3 @@
-/*
-Package cleanenv gives you a single tool to read application configuration from several sources.
-
-You can just prepare config structure and fill it from the config file and environment variables.
-
-	type Config struct {
-		Port string `yaml:"port" env:"PORT" env-default:"8080"`
-		Host string `yaml:"host" env:"HOST" env-default:"localhost"`
-	}
-
-	var cfg Config
-
-	ReadConfig("config.yml", &cfg)
-*/
 package cleanenv
 
 import (
