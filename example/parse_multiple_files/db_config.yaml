@@ -1,0 +1,7 @@
+database:
+  host: "localhost"
+  user: "root"
+  password: "password"
+  name: "cleanenv"
+  port: "5432"
+  ssl_mode: "disable"
