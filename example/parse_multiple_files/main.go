@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"os"
 
 	"github.com/ilyakaznacheev/cleanenv"
 )
@@ -29,12 +28,7 @@ type emailService struct {
 }
 
 func main() {
-	if len(os.Args[1:]) == 0 {
-		log.Println("Provide a list of yaml files for configuration")
-		return
-	}
-
-	cfg, err := ParseConfigFiles(os.Args[1:]...)
+	cfg, err := ParseConfigFiles("./db_config.yaml", "./email_config.yaml", "./general_config.yaml")
 	if err != nil {
 		log.Printf("Error parsing config files: %v", err)
 		return
