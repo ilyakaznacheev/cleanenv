@@ -27,10 +27,13 @@ func ExampleGetDescription() {
 	//Output: Environment variables:
 	//   ONE int64
 	//     	first parameter
+	//     	Required: false
 	//   TWO float64
 	//     	second parameter
+	//     	Required: false
 	//   THREE string
 	//     	third parameter
+	//     	Required: false
 }
 
 // ExampleGetDescription_defaults builds a description text from structure tags with description of default values
@@ -51,11 +54,17 @@ func ExampleGetDescription_defaults() {
 	fmt.Println(text)
 	//Output: Environment variables:
 	//   ONE int64
-	//     	first parameter (default "1")
+	//     	first parameter
+	//     	Default: "1"
+	//     	Required: false
 	//   TWO float64
-	//     	second parameter (default "2.2")
+	//     	second parameter
+	//     	Default: "2.2"
+	//     	Required: false
 	//   THREE string
-	//     	third parameter (default "test")
+	//     	third parameter
+	//     	Default: "test"
+	//     	Required: false
 }
 
 // ExampleGetDescription_variableList builds a description text from structure tags with description of alternative variables
@@ -75,10 +84,13 @@ func ExampleGetDescription_variableList() {
 	//Output: Environment variables:
 	//   ONE int64
 	//     	first found parameter
+	//     	Required: false
 	//   TWO int64 (alternative to ONE)
 	//     	first found parameter
+	//     	Required: false
 	//   THREE int64 (alternative to ONE)
 	//     	first found parameter
+	//     	Required: false
 }
 
 // ExampleGetDescription_customHeaderText builds a description text from structure tags with custom header string
@@ -102,10 +114,13 @@ func ExampleGetDescription_customHeaderText() {
 	//Output: Custom header text:
 	//   ONE int64
 	//     	first parameter
+	//     	Required: false
 	//   TWO float64
 	//     	second parameter
+	//     	Required: false
 	//   THREE string
 	//     	third parameter
+	//     	Required: false
 }
 
 // ExampleUpdateEnv updates variables in the configuration structure.
@@ -250,8 +265,11 @@ func ExampleUsage() {
 	// My sweet variables:
 	//   ONE int64
 	//     	first parameter
+	//     	Required: false
 	//   TWO float64
 	//     	second parameter
+	//     	Required: false
 	//   THREE string
 	//     	third parameter
+	//     	Required: false
 }
