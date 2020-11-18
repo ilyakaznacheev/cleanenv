@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"math"
 	"os"
 	"path/filepath"
@@ -13,8 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/BurntSushi/toml"
 	"github.com/joho/godotenv"
+	"github.com/pelletier/go-toml"
 	"gopkg.in/yaml.v2"
 	"olympos.io/encoding/edn"
 )
@@ -156,7 +157,11 @@ func parseJSON(r io.Reader, str interface{}) error {
 
 // parseTOML parses TOML from reader to data structure
 func parseTOML(r io.Reader, str interface{}) error {
-	_, err := toml.DecodeReader(r, str)
+	bytes, err := ioutil.ReadAll(r)
+	if err != nil {
+		return err
+	}
+	err = toml.Unmarshal(bytes, str)
 	return err
 }
 
