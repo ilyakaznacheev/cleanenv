@@ -112,6 +112,30 @@ if err != nil {
 }
 ```
 
+### Read Environment Variables with Common Prefix
+
+Some applications are configured with environment variables that share the same prefix. Prefixed
+environment variables such as `APPNAME_PORT, APPNAME_HOST, ...` can be read without repeating the
+prefix in struct tags:
+```go
+import github.com/ilyakaznacheev/cleanenv
+
+type ConfigDatabase struct {
+    Port     string `env:"PORT" env-default:"5432"`
+    Host     string `env:"HOST" env-default:"localhost"`
+    Name     string `env:"NAME" env-default:"postgres"`
+    User     string `env:"USER" env-default:"user"`
+    Password string `env:"PASSWORD"`
+}
+
+var cfg ConfigDatabase
+
+err := cleanenv.ReadEnvWithPrefix("appname", &cfg)
+if err != nil {
+    ...
+}
+```
+
 ### Update Environment Variables
 
 Some environment variables may change during the application run. To get the new values you need to mark these variables as updatable with the tag `env-upd` and then run the update function:
