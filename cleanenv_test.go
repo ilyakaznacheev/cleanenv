@@ -81,6 +81,7 @@ func TestReadEnvVars(t *testing.T) {
 		name    string
 		env     map[string]string
 		cfg     interface{}
+		prefix  string
 		want    interface{}
 		wantErr bool
 	}{
@@ -91,6 +92,23 @@ func TestReadEnvVars(t *testing.T) {
 				"TEST2": "3",
 			},
 			cfg: &Combined{},
+			want: &Combined{
+				Empty:   0,
+				Default: 1,
+				Global:  2,
+				local:   0,
+			},
+			wantErr: false,
+		},
+
+		{
+			name: "combined with prefix",
+			env: map[string]string{
+				"PREFIX_TEST1": "2",
+				"PREFIX_TEST2": "3",
+			},
+			cfg:    &Combined{},
+			prefix: "prefix",
 			want: &Combined{
 				Empty:   0,
 				Default: 1,
@@ -116,6 +134,47 @@ func TestReadEnvVars(t *testing.T) {
 				"TEST_MAPSTRINGSTRING": "a:x,b:y,c:z",
 			},
 			cfg: &AllTypes{},
+			want: &AllTypes{
+				Integer:     -5,
+				UnsInteger:  5,
+				Float:       5.5,
+				Boolean:     true,
+				String:      "test",
+				Duration:    durationFunc("1h5m10s"),
+				Time:        timeFunc("2012-04-23T18:25:43.511Z", time.RFC3339),
+				ArrayInt:    []int{1, 2, 3},
+				ArrayString: []string{"a", "b", "c"},
+				MapStringInt: map[string]int{
+					"a": 1,
+					"b": 2,
+					"c": 3,
+				},
+				MapStringString: map[string]string{
+					"a": "x",
+					"b": "y",
+					"c": "z",
+				},
+			},
+			wantErr: false,
+		},
+
+		{
+			name: "all types with prefix",
+			env: map[string]string{
+				"PREFIX_TEST_INTEGER":         "-5",
+				"PREFIX_TEST_UNSINTEGER":      "5",
+				"PREFIX_TEST_FLOAT":           "5.5",
+				"PREFIX_TEST_BOOLEAN":         "true",
+				"PREFIX_TEST_STRING":          "test",
+				"PREFIX_TEST_DURATION":        "1h5m10s",
+				"PREFIX_TEST_TIME":            "2012-04-23T18:25:43.511Z",
+				"PREFIX_TEST_ARRAYINT":        "1,2,3",
+				"PREFIX_TEST_ARRAYSTRING":     "a,b,c",
+				"PREFIX_TEST_MAPSTRINGINT":    "a:1,b:2,c:3",
+				"PREFIX_TEST_MAPSTRINGSTRING": "a:x,b:y,c:z",
+			},
+			cfg:    &AllTypes{},
+			prefix: "prefix",
 			want: &AllTypes{
 				Integer:     -5,
 				UnsInteger:  5,
@@ -169,6 +228,35 @@ func TestReadEnvVars(t *testing.T) {
 		},
 
 		{
+			name: "times with prefix",
+			env: map[string]string{
+				"PREFIX_TEST_TIME1": "2012-04-23T18:25:43.511Z",
+				"PREFIX_TEST_TIME2": "Mon Mar 10 11:11:11 2011",
+				"PREFIX_TEST_TIME3": "Dec 1 11:11:11",
+				"PREFIX_TEST_TIME6": "2012-04-23T18:25:43.511Z|2012-05-23T18:25:43.511Z",
+				"PREFIX_TEST_TIME7": "a:2012-04-23T18:25:43.511Z|b:2012-05-23T18:25:43.511Z",
+			},
+			cfg:    &TimeTypes{},
+			prefix: "prefix",
+			want: &TimeTypes{
+				Time1: timeFunc("2012-04-23T18:25:43.511Z", time.RFC3339),
+				Time2: timeFunc("Mon Mar 10 11:11:11 2011", time.ANSIC),
+				Time3: timeFunc("Dec 1 11:11:11", time.Stamp),
+				Time4: timeFunc("2012-04-23T18:25:43.511Z", time.RFC3339),
+				Time5: timeFunc("Mon Mar 10 11:11:11 2011", time.ANSIC),
+				Time6: []time.Time{
+					timeFunc("2012-04-23T18:25:43.511Z", time.RFC3339),
+					timeFunc("2012-05-23T18:25:43.511Z", time.RFC3339),
+				},
+				Time7: map[string]time.Time{
+					"a": timeFunc("2012-04-23T18:25:43.511Z", time.RFC3339),
+					"b": timeFunc("2012-05-23T18:25:43.511Z", time.RFC3339),
+				},
+			},
+			wantErr: false,
+		},
+
+		{
 			name: "wrong types",
 			env: map[string]string{
 				"TEST_INTEGER":         "a",
@@ -183,6 +271,26 @@ func TestReadEnvVars(t *testing.T) {
 				"TEST_MAPSTRINGSTRING": "a:1,b:2,c:3",
 			},
 			cfg:     &AllTypes{},
+			want:    &AllTypes{},
+			wantErr: true,
+		},
+
+		{
+			name: "wrong types with prefix",
+			env: map[string]string{
+				"PREFIX_TEST_INTEGER":         "a",
+				"PREFIX_TEST_UNSINTEGER":      "b",
+				"PREFIX_TEST_FLOAT":           "c",
+				"PREFIX_TEST_BOOLEAN":         "xxx",
+				"PREFIX_TEST_STRING":          "",
+				"PREFIX_TEST_DURATION":        "-",
+				"PREFIX_TEST_ARRAYINT":        "a,b,c",
+				"PREFIX_TEST_ARRAYSTRING":     "1,2,3",
+				"PREFIX_TEST_MAPSTRINGINT":    "a:x,b:y,c:z",
+				"PREFIX_TEST_MAPSTRINGSTRING": "a:1,b:2,c:3",
+			},
+			cfg:     &AllTypes{},
+			prefix:  "prefix",
 			want:    &AllTypes{},
 			wantErr: true,
 		},
@@ -306,7 +414,7 @@ func TestReadEnvVars(t *testing.T) {
 			}
 			defer os.Clearenv()
 
-			if err := readEnvVars(tt.cfg, false); (err != nil) != tt.wantErr {
+			if err := readEnvVars(tt.cfg, tt.prefix, false); (err != nil) != tt.wantErr {
 				t.Errorf("wrong error behavior %v, wantErr %v", err, tt.wantErr)
 			}
 			if !reflect.DeepEqual(tt.cfg, tt.want) {
@@ -333,6 +441,7 @@ func TestReadEnvVarsTime(t *testing.T) {
 		name    string
 		env     map[string]string
 		cfg     interface{}
+		prefix  string
 		want    interface{}
 		wantErr bool
 	}{
@@ -341,7 +450,21 @@ func TestReadEnvVarsTime(t *testing.T) {
 			env: map[string]string{
 				"TEST_TIME": "Mon Mar 10 11:11:11 2011",
 			},
-			cfg: &Timed{},
+			cfg:    &Timed{},
+			prefix: "",
+			want: &Timed{
+				Time: timeFunc("Mon Mar 10 11:11:11 2011", time.ANSIC),
+			},
+			wantErr: false,
+		},
+
+		{
+			name: "time with prefix",
+			env: map[string]string{
+				"PREFIX_TEST_TIME": "Mon Mar 10 11:11:11 2011",
+			},
+			prefix: "prefix",
+			cfg:    &Timed{},
 			want: &Timed{
 				Time: timeFunc("Mon Mar 10 11:11:11 2011", time.ANSIC),
 			},
@@ -356,7 +479,7 @@ func TestReadEnvVarsTime(t *testing.T) {
 			}
 			defer os.Clearenv()
 
-			if err := readEnvVars(tt.cfg, false); (err != nil) != tt.wantErr {
+			if err := readEnvVars(tt.cfg, tt.prefix, false); (err != nil) != tt.wantErr {
 				t.Errorf("wrong error behavior %v, wantErr %v", err, tt.wantErr)
 			}
 			if !reflect.DeepEqual(tt.cfg, tt.want) {
@@ -426,7 +549,7 @@ func TestReadUpdateFunctions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := readEnvVars(tt.cfg, false); (err != nil) != tt.wantErr {
+			if err := readEnvVars(tt.cfg, "", false); (err != nil) != tt.wantErr {
 				t.Errorf("wrong error behavior %v, wantErr %v", err, tt.wantErr)
 			}
 			if !reflect.DeepEqual(tt.cfg, tt.want) {
@@ -774,6 +897,148 @@ func TestGetDescription(t *testing.T) {
 	}
 }
 
+func TestGetDescriptionWithPrefix(t *testing.T) {
+	type testSingleEnv struct {
+		One   int `env:"ONE" env-description:"one"`
+		Two   int `env:"TWO" env-description:"two"`
+		Three int `env:"THREE" env-description:"three"`
+	}
+
+	type testSeveralEnv struct {
+		One int `env:"ONE,ENO" env-description:"one"`
+		Two int `env:"TWO,OWT" env-description:"two"`
+	}
+
+	type testDefaultEnv struct {
+		One   int `env:"ONE" env-description:"one" env-default:"1"`
+		Two   int `env:"TWO" env-description:"two" env-default:"2"`
+		Three int `env:"THREE" env-description:"three" env-default:"3"`
+	}
+
+	type testSubOne struct {
+		One int `env:"ONE" env-description:"one"`
+	}
+
+	type testSubTwo struct {
+		Two int `env:"TWO" env-description:"two"`
+	}
+
+	type testDeep struct {
+		OneStruct testSubOne
+		TwoStruct testSubTwo
+	}
+
+	type testNoEnv struct {
+		One   int
+		Two   int
+		Three int
+	}
+
+	header := "test header:"
+
+	prefix := "prefix"
+
+	tests := []struct {
+		name    string
+		cfg     interface{}
+		header  *string
+		prefix  string
+		want    string
+		wantErr bool
+	}{
+		{
+			name:   "single env",
+			cfg:    &testSingleEnv{},
+			header: nil,
+			prefix: prefix,
+			want: "Environment variables:" +
+				"\n  PREFIX_ONE int\n    \tone" +
+				"\n  PREFIX_TWO int\n    \ttwo" +
+				"\n  PREFIX_THREE int\n    \tthree",
+			wantErr: false,
+		},
+
+		{
+			name:   "several env",
+			cfg:    &testSeveralEnv{},
+			header: nil,
+			prefix: prefix,
+			want: "Environment variables:" +
+				"\n  PREFIX_ONE int\n    \tone" +
+				"\n  PREFIX_ENO int (alternative to PREFIX_ONE)\n    \tone" +
+				"\n  PREFIX_TWO int\n    \ttwo" +
+				"\n  PREFIX_OWT int (alternative to PREFIX_TWO)\n    \ttwo",
+			wantErr: false,
+		},
+
+		{
+			name:   "default env",
+			cfg:    &testDefaultEnv{},
+			header: nil,
+			prefix: prefix,
+			want: "Environment variables:" +
+				"\n  PREFIX_ONE int\n    \tone (default \"1\")" +
+				"\n  PREFIX_TWO int\n    \ttwo (default \"2\")" +
+				"\n  PREFIX_THREE int\n    \tthree (default \"3\")",
+			wantErr: false,
+		},
+
+		{
+			name:   "deep structure",
+			cfg:    &testDeep{},
+			header: nil,
+			prefix: prefix,
+			want: "Environment variables:" +
+				"\n  PREFIX_ONE int\n    \tone" +
+				"\n  PREFIX_TWO int\n    \ttwo",
+			wantErr: false,
+		},
+
+		{
+			name:    "no env",
+			cfg:     &testNoEnv{},
+			header:  nil,
+			prefix:  prefix,
+			want:    "",
+			wantErr: false,
+		},
+
+		{
+			name:   "custom header",
+			cfg:    &testSingleEnv{},
+			header: &header,
+			prefix: prefix,
+			want: "test header:" +
+				"\n  PREFIX_ONE int\n    \tone" +
+				"\n  PREFIX_TWO int\n    \ttwo" +
+				"\n  PREFIX_THREE int\n    \tthree",
+			wantErr: false,
+		},
+
+		{
+			name:    "error",
+			cfg:     123,
+			header:  nil,
+			prefix:  prefix,
+			want:    "",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := GetDescriptionWithPrefix(tt.cfg, tt.prefix, tt.header)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("wrong error behavior %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("wrong description text %s, want %s", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestFUsage(t *testing.T) {
 	type testSingleEnv struct {
 		One   int `env:"ONE" env-description:"one"`
@@ -1032,6 +1297,189 @@ no-env: this
 
 			var cfg config
 			if err = ReadConfig(tmpFile.Name(), &cfg); (err != nil) != tt.wantErr {
+				t.Errorf("wrong error behavior %v, wantErr %v", err, tt.wantErr)
+			}
+			if err == nil && !reflect.DeepEqual(&cfg, tt.want) {
+				t.Errorf("wrong data %v, want %v", &cfg, tt.want)
+			}
+		})
+	}
+}
+
+func TestReadConfigWithPrefix(t *testing.T) {
+	type config struct {
+		Number    int64  `edn:"number" yaml:"number" env:"TEST_NUMBER" env-default:"1"`
+		String    string `edn:"string" yaml:"string" env:"TEST_STRING" env-default:"default"`
+		NoDefault string `edn:"no-default" yaml:"no-default" env:"TEST_NO_DEFAULT"`
+		NoEnv     string `edn:"no-env" yaml:"no-env" env-default:"default"`
+	}
+
+	tests := []struct {
+		name    string
+		file    string
+		ext     string
+		env     map[string]string
+		prefix  string
+		want    *config
+		wantErr bool
+	}{
+		{
+			name: "edn_only",
+			file: `
+			{
+				:number 2
+				:string "test"
+				:no-default "NoDefault"
+				:no-env "this"
+			}
+`,
+			ext: "edn",
+			env: nil,
+			want: &config{
+				Number:    2,
+				String:    "test",
+				NoDefault: "NoDefault",
+				NoEnv:     "this",
+			},
+			wantErr: false,
+		},
+
+		{
+			name: "edn_and_env",
+			file: `
+			{
+				:number 2
+				:string "test"
+				:no-default "NoDefault"
+				:no-env "this"
+			}
+`,
+			ext: "edn",
+			env: map[string]string{
+				"PREFIX_TEST_NUMBER": "3",
+				"PREFIX_TEST_STRING": "fromEnv",
+			},
+			prefix: "prefix",
+			want: &config{
+				Number:    3,
+				String:    "fromEnv",
+				NoDefault: "NoDefault",
+				NoEnv:     "this",
+			},
+			wantErr: false,
+		},
+
+		{
+			name: "yaml_only",
+			file: `
+number: 2
+string: test
+no-default: NoDefault
+no-env: this
+`,
+			ext: "yaml",
+			env: nil,
+			want: &config{
+				Number:    2,
+				String:    "test",
+				NoDefault: "NoDefault",
+				NoEnv:     "this",
+			},
+			wantErr: false,
+		},
+
+		{
+			name: "env_only",
+			file: "none: none",
+			ext:  "yaml",
+			env: map[string]string{
+				"PREFIX_TEST_NUMBER": "2",
+				"PREFIX_TEST_STRING": "test",
+			},
+			prefix: "prefix",
+			want: &config{
+				Number:    2,
+				String:    "test",
+				NoDefault: "",
+				NoEnv:     "default",
+			},
+			wantErr: false,
+		},
+
+		{
+			name: "yaml_and_env",
+			file: `
+number: 2
+string: test
+no-default: NoDefault
+no-env: this
+`,
+			ext: "yaml",
+			env: map[string]string{
+				"PREFIX_TEST_NUMBER": "3",
+				"PREFIX_TEST_STRING": "fromEnv",
+			},
+			prefix: "prefix",
+			want: &config{
+				Number:    3,
+				String:    "fromEnv",
+				NoDefault: "NoDefault",
+				NoEnv:     "this",
+			},
+			wantErr: false,
+		},
+
+		{
+			name: "empty",
+			file: "none: none",
+			ext:  "yaml",
+			env:  nil,
+			want: &config{
+				Number:    1,
+				String:    "default",
+				NoDefault: "",
+				NoEnv:     "default",
+			},
+			wantErr: false,
+		},
+
+		{
+			name:    "unknown",
+			file:    "-",
+			ext:     "",
+			want:    nil,
+			wantErr: true,
+		},
+
+		{
+			name:    "parsing error",
+			file:    "-",
+			ext:     "json",
+			want:    nil,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpFile, err := ioutil.TempFile(os.TempDir(), fmt.Sprintf("*.%s", tt.ext))
+			if err != nil {
+				t.Fatal("cannot create temporary file:", err)
+			}
+			defer os.Remove(tmpFile.Name())
+
+			text := []byte(tt.file)
+			if _, err = tmpFile.Write(text); err != nil {
+				t.Fatal("failed to write to temporary file:", err)
+			}
+
+			for env, val := range tt.env {
+				os.Setenv(env, val)
+			}
+			defer os.Clearenv()
+
+			var cfg config
+			if err = ReadConfigWithPrefix(tmpFile.Name(), tt.prefix, &cfg); (err != nil) != tt.wantErr {
 				t.Errorf("wrong error behavior %v, wantErr %v", err, tt.wantErr)
 			}
 			if err == nil && !reflect.DeepEqual(&cfg, tt.want) {

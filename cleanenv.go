@@ -89,17 +89,40 @@ func ReadConfig(path string, cfg interface{}) error {
 		return err
 	}
 
-	return readEnvVars(cfg, false)
+	return readEnvVars(cfg, "", false)
 }
 
 // ReadEnv reads environment variables into the structure.
 func ReadEnv(cfg interface{}) error {
-	return readEnvVars(cfg, false)
+	return readEnvVars(cfg, "", false)
 }
 
 // UpdateEnv rereads (updates) environment variables in the structure.
 func UpdateEnv(cfg interface{}) error {
-	return readEnvVars(cfg, true)
+	return readEnvVars(cfg, "", true)
+}
+
+// ReadConfigWithPrefix reads configuration file and parses it depending on tags in structure provided.
+// All environment variables are expected to begin with the provided prefix.
+func ReadConfigWithPrefix(path string, prefix string, cfg interface{}) error {
+	err := parseFile(path, cfg)
+	if err != nil {
+		return err
+	}
+
+	return readEnvVars(cfg, prefix, false)
+}
+
+// ReadEnvWithPrefix reads environment variables into the structure.
+// All environment variables are expected to begin with the provided prefix.
+func ReadEnvWithPrefix(prefix string, cfg interface{}) error {
+	return readEnvVars(cfg, prefix, false)
+}
+
+// UpdateEnvWithPrefix rereads (updates) environment variables in the structure.
+// All environment variables are expected to begin with the provided prefix.
+func UpdateEnvWithPrefix(prefix string, cfg interface{}) error {
+	return readEnvVars(cfg, prefix, true)
 }
 
 // parseFile parses configuration file according to it's extension
@@ -199,7 +222,7 @@ func (sm *structMeta) isFieldValueZero() bool {
 }
 
 // readStructMetadata reads structure metadata (types, tags, etc.)
-func readStructMetadata(cfgRoot interface{}) ([]structMeta, error) {
+func readStructMetadata(cfgRoot interface{}, prefix string) ([]structMeta, error) {
 	cfgStack := []interface{}{cfgRoot}
 	metas := make([]structMeta, 0)
 
@@ -266,6 +289,13 @@ func readStructMetadata(cfgRoot interface{}) ([]structMeta, error) {
 				envList = strings.Split(envs, DefaultSeparator)
 			}
 
+			if prefix != "" {
+				prefixUpper := strings.ToUpper(prefix)
+				for i := 0; i < len(envList); i++ {
+					envList[i] = fmt.Sprintf("%s_%s", prefixUpper, envList[i])
+				}
+			}
+
 			metas = append(metas, structMeta{
 				envList:     envList,
 				fieldName:   s.Type().Field(idx).Name,
@@ -285,8 +315,8 @@ func readStructMetadata(cfgRoot interface{}) ([]structMeta, error) {
 }
 
 // readEnvVars reads environment variables to the provided configuration structure
-func readEnvVars(cfg interface{}, update bool) error {
-	metaInfo, err := readStructMetadata(cfg)
+func readEnvVars(cfg interface{}, prefix string, update bool) error {
+	metaInfo, err := readStructMetadata(cfg, prefix)
 	if err != nil {
 		return err
 	}
@@ -486,11 +516,29 @@ func parseMap(valueType reflect.Type, value string, sep string, layout *string) 
 // GetDescription returns a description of environment variables.
 // You can provide a custom header text.
 func GetDescription(cfg interface{}, headerText *string) (string, error) {
-	meta, err := readStructMetadata(cfg)
+	meta, err := readStructMetadata(cfg, "")
 	if err != nil {
 		return "", err
 	}
 
+	description := buildDescription(meta, headerText)
+	return description, nil
+}
+
+// GetDescriptionWithPrefix returns a description of environment variables.
+// You can provide a custom header text and a custom environment variable prefix.
+func GetDescriptionWithPrefix(cfg interface{}, prefix string, headerText *string) (string, error) {
+	meta, err := readStructMetadata(cfg, prefix)
+	if err != nil {
+		return "", err
+	}
+
+	description := buildDescription(meta, headerText)
+	return description, nil
+}
+
+// buildDescription returns a description of environment variables from struct metadata.
+func buildDescription(meta []structMeta, headerText *string) string {
 	var header, description string
 
 	if headerText != nil {
@@ -519,9 +567,9 @@ func GetDescription(cfg interface{}, headerText *string) (string, error) {
 	}
 
 	if description != "" {
-		return header + description, nil
+		return header + description
 	}
-	return "", nil
+	return ""
 }
 
 // Usage returns a configuration usage help.
