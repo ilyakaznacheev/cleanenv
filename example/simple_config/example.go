@@ -11,20 +11,24 @@ import (
 )
 
 // Config is a application configuration structure
+type Database struct {
+	Host        string `yaml:"host" env:"DB_HOST" env-description:"Database host"`
+	Port        string `yaml:"port" env:"DB_PORT" env-description:"Database port"`
+	Username    string `yaml:"username" env:"DB_USER" env-description:"Database user name"`
+	Password    string `env:"DB_PASSWORD" env-description:"Database user password"`
+	Name        string `yaml:"db-name" env:"DB_NAME" env-description:"Database name"`
+	Connections int    `yaml:"connections" env:"DB_CONNECTIONS" env-description:"Total number of database connections"`
+}
+
+type Server struct {
+	Host string `yaml:"host" env:"SRV_HOST,HOST" env-description:"Server host" env-default:"localhost"`
+	Port string `yaml:"port" env:"SRV_PORT,PORT" env-description:"Server port" env-default:"8080"`
+}
+
 type Config struct {
-	Database struct {
-		Host        string `yaml:"host" env:"DB_HOST" env-description:"Database host"`
-		Port        string `yaml:"port" env:"DB_PORT" env-description:"Database port"`
-		Username    string `yaml:"username" env:"DB_USER" env-description:"Database user name"`
-		Password    string `env:"DB_PASSWORD" env-description:"Database user password"`
-		Name        string `yaml:"db-name" env:"DB_NAME" env-description:"Database name"`
-		Connections int    `yaml:"connections" env:"DB_CONNECTIONS" env-description:"Total number of database connections"`
-	} `yaml:"database"`
-	Server struct {
-		Host string `yaml:"host" env:"SRV_HOST,HOST" env-description:"Server host" env-default:"localhost"`
-		Port string `yaml:"port" env:"SRV_PORT,PORT" env-description:"Server port" env-default:"8080"`
-	} `yaml:"server"`
-	Greeting string `env:"GREETING" env-description:"Greeting phrase" env-default:"Hello!"`
+	Database Database `yaml:"database"`
+	Server   Server   `yaml:"server"`
+	Greeting string   `env:"GREETING" env-description:"Greeting phrase" env-default:"Hello!"`
 }
 
 // Args command-line parameters
