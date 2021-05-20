@@ -824,11 +824,11 @@ func TestGetDescription(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := GetDescription(tt.cfg, tt.header)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("wrong error behavior %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("%s: wrong error behavior %v, wantErr %v", tt.name, err, tt.wantErr)
 				return
 			}
 			if got != tt.want {
-				t.Errorf("wrong description text %s, want %s", got, tt.want)
+				t.Errorf("%s: wrong description text %s, want %s", tt.name, got, tt.want)
 			}
 		})
 	}
