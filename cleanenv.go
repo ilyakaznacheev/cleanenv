@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -212,6 +213,14 @@ var validStructs = map[string]func(*reflect.Value, string, *string) error{
 			return err
 		}
 		field.Set(reflect.ValueOf(val))
+		return nil
+	},
+	"net/url.URL": func(field *reflect.Value, value string, _ *string) error {
+		val, err := url.Parse(value)
+		if err != nil {
+			return err
+		}
+		field.Set(reflect.ValueOf(*val))
 		return nil
 	},
 }

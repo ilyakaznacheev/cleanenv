@@ -3,6 +3,7 @@ package cleanenv_test
 import (
 	"flag"
 	"fmt"
+	"net/url"
 	"os"
 
 	"github.com/ilyakaznacheev/cleanenv"
@@ -142,11 +143,12 @@ func ExampleUpdateEnv() {
 // ExampleReadEnv reads environment variables or default values into the structure
 func ExampleReadEnv() {
 	type config struct {
-		Port     string `env:"PORT" env-default:"5432"`
-		Host     string `env:"HOST" env-default:"localhost"`
-		Name     string `env:"NAME" env-default:"postgres"`
-		User     string `env:"USER" env-default:"user"`
-		Password string `env:"PASSWORD"`
+		Port     string  `env:"PORT" env-default:"5432"`
+		Host     string  `env:"HOST" env-default:"localhost"`
+		Name     string  `env:"NAME" env-default:"postgres"`
+		User     string  `env:"USER" env-default:"user"`
+		Password string  `env:"PASSWORD"`
+		ImageCDN url.URL `env:"IMAGE_CDN"`
 	}
 
 	var cfg config
@@ -155,12 +157,12 @@ func ExampleReadEnv() {
 	os.Setenv("NAME", "redis")
 	os.Setenv("USER", "tester")
 	os.Setenv("PASSWORD", "*****")
+	os.Setenv("IMAGE_CDN", "https://images.cdn/")
 
 	cleanenv.ReadEnv(&cfg)
 	fmt.Printf("%+v\n", cfg)
 
-	//Output: {Port:5050 Host:localhost Name:redis User:tester Password:*****}
-
+	//Output: {Port:5050 Host:localhost Name:redis User:tester Password:***** ImageCDN:{Scheme:https Opaque: User: Host:images.cdn Path:/ RawPath: ForceQuery:false RawQuery: Fragment:}}
 }
 
 // MyField is an example type with a custom setter
