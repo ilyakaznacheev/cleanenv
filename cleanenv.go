@@ -198,6 +198,24 @@ func (sm *structMeta) isFieldValueZero() bool {
 	return isZero(sm.fieldValue)
 }
 
+// Any specific supported struct can be added here
+var validStructs = map[string]func(*reflect.Value, string, *string) error{
+	"time.Time": func(field *reflect.Value, value string, layout *string) error {
+		var l string
+		if layout != nil {
+			l = *layout
+		} else {
+			l = time.RFC3339
+		}
+		val, err := time.Parse(l, value)
+		if err != nil {
+			return err
+		}
+		field.Set(reflect.ValueOf(val))
+		return nil
+	},
+}
+
 // readStructMetadata reads structure metadata (types, tags, etc.)
 func readStructMetadata(cfgRoot interface{}) ([]structMeta, error) {
 	cfgStack := []interface{}{cfgRoot}
@@ -228,10 +246,11 @@ func readStructMetadata(cfgRoot interface{}) ([]structMeta, error) {
 				separator string
 			)
 
-			// process nested structure (except of time.Time)
+			// process nested structure (except of supported ones)
 			if fld := s.Field(idx); fld.Kind() == reflect.Struct {
 				// add structure to parsing stack
-				if fld.Type() != reflect.TypeOf(time.Time{}) {
+				structType := fmt.Sprintf("%s.%s", fld.Type().PkgPath(), fld.Type().Name())
+				if _, found := validStructs[structType]; !found {
 					cfgStack = append(cfgStack, fld.Addr().Interface())
 					continue
 				}
@@ -416,20 +435,9 @@ func parseValue(field reflect.Value, value, sep string, layout *string) error {
 		field.Set(*mapValue)
 
 	case reflect.Struct:
-		// process time.Time only
-		if valueType.PkgPath() == "time" && valueType.Name() == "Time" {
-
-			var l string
-			if layout != nil {
-				l = *layout
-			} else {
-				l = time.RFC3339
-			}
-			val, err := time.Parse(l, value)
-			if err != nil {
-				return err
-			}
-			field.Set(reflect.ValueOf(val))
+		structType := fmt.Sprintf("%s.%s", valueType.PkgPath(), valueType.Name())
+		if structParser, found := validStructs[structType]; found {
+			return structParser(&field, value, layout)
 		}
 
 	default:
