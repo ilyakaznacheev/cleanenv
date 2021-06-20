@@ -366,6 +366,66 @@ func TestReadEnvVarsTime(t *testing.T) {
 	}
 }
 
+func TestReadEnvVarsWithPrefix(t *testing.T) {
+	type Logging struct {
+		Debug bool `env:"DEBUG"`
+	}
+
+	type DBConfig struct {
+		Host    string  `env:"DB_HOST"`
+		Port    int     `env:"DB_PORT"`
+		Logging Logging `env-prefix:"DB_"`
+	}
+
+	type Config struct {
+		Default  DBConfig
+		ReadOnly DBConfig `env-prefix:"READONLY_"`
+		Extra    DBConfig `env-prefix:"EXTRA_"`
+	}
+
+	var env = map[string]string{
+		"DB_HOST":           "db1.host",
+		"DB_PORT":           "10000",
+		"DB_DEBUG":          "true",
+		"READONLY_DB_HOST":  "db2.host",
+		"READONLY_DB_PORT":  "20000",
+		"READONLY_DB_DEBUG": "true",
+		"EXTRA_DB_HOST":     "db3.host",
+		"EXTRA_DB_PORT":     "30000",
+		"EXTRA_DB_DEBUG":    "true",
+	}
+	for k, v := range env {
+		os.Setenv(k, v)
+	}
+
+	var cfg Config
+	if err := readEnvVars(&cfg, false); err != nil {
+		t.Fatal("failed to read env vars", err)
+	}
+
+	var expected = Config{
+		Default: DBConfig{
+			Host:    "db1.host",
+			Port:    10000,
+			Logging: Logging{Debug: true},
+		},
+		ReadOnly: DBConfig{
+			Host:    "db2.host",
+			Port:    20000,
+			Logging: Logging{Debug: true},
+		},
+		Extra: DBConfig{
+			Host:    "db3.host",
+			Port:    30000,
+			Logging: Logging{Debug: true},
+		},
+	}
+
+	if !reflect.DeepEqual(cfg, expected) {
+		t.Errorf("wrong data %v, want %v", cfg, expected)
+	}
+}
+
 type testConfigUpdateFunction struct {
 	One   string
 	Two   string

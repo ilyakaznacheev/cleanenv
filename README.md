@@ -178,6 +178,7 @@ Library uses tags to configure the model of configuration structure. There are t
 - `env-separator="<value>"` - custom list and map separator. If not set, the default separator `,` will be used;
 - `env-description="<value>"` - environment variable description;
 - `env-layout="<value>"` - parsing layout (for types like `time.Time`);
+- `env-prefix="<value>"` - prefix for all fields of nested structure (only for nested structures);
 
 ## Supported types
 
