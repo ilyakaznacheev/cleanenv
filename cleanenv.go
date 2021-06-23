@@ -15,7 +15,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/joho/godotenv"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 	"olympos.io/encoding/edn"
 )
 
