@@ -40,6 +40,8 @@ const (
 	TagEnvUpd = "env-upd"
 	// Flag to mark a field as required
 	TagEnvRequired = "env-required"
+	// Flag to specify prefix for structure fields
+	TagEnvPrefix = "env-prefix"
 )
 
 // Setter is an interface for a custom value setter.
@@ -200,12 +202,18 @@ func (sm *structMeta) isFieldValueZero() bool {
 
 // readStructMetadata reads structure metadata (types, tags, etc.)
 func readStructMetadata(cfgRoot interface{}) ([]structMeta, error) {
-	cfgStack := []interface{}{cfgRoot}
+	type cfgNode struct {
+		Val    interface{}
+		Prefix string
+	}
+
+	cfgStack := []cfgNode{{cfgRoot, ""}}
 	metas := make([]structMeta, 0)
 
 	for i := 0; i < len(cfgStack); i++ {
 
-		s := reflect.ValueOf(cfgStack[i])
+		s := reflect.ValueOf(cfgStack[i].Val)
+		sPrefix := cfgStack[i].Prefix
 
 		// unwrap pointer
 		if s.Kind() == reflect.Ptr {
@@ -232,7 +240,8 @@ func readStructMetadata(cfgRoot interface{}) ([]structMeta, error) {
 			if fld := s.Field(idx); fld.Kind() == reflect.Struct {
 				// add structure to parsing stack
 				if fld.Type() != reflect.TypeOf(time.Time{}) {
-					cfgStack = append(cfgStack, fld.Addr().Interface())
+					prefix, _ := fType.Tag.Lookup(TagEnvPrefix)
+					cfgStack = append(cfgStack, cfgNode{fld.Addr().Interface(), sPrefix + prefix})
 					continue
 				}
 				// process time.Time
@@ -264,6 +273,11 @@ func readStructMetadata(cfgRoot interface{}) ([]structMeta, error) {
 
 			if envs, ok := fType.Tag.Lookup(TagEnv); ok && len(envs) != 0 {
 				envList = strings.Split(envs, DefaultSeparator)
+				if sPrefix != "" {
+					for i := range envList {
+						envList[i] = sPrefix + envList[i]
+					}
+				}
 			}
 
 			metas = append(metas, structMeta{
