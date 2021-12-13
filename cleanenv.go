@@ -327,8 +327,13 @@ func readEnvVars(cfg interface{}, update bool) error {
 		}
 
 		if rawValue == nil && meta.required && meta.isFieldValueZero() {
-			err := fmt.Errorf("field %q is required but the value is not provided",
-				meta.fieldName)
+			envList := ""
+			for _, env := range meta.envList {
+				envList = envList + env + " "
+			}
+			envList = strings.Trim(envList, " ")
+			err := fmt.Errorf("field %q is required but the value is not provided. Envs names: %q",
+				meta.fieldName, envList)
 			return err
 		}
 
@@ -526,8 +531,10 @@ func GetDescription(cfg interface{}, headerText *string) (string, error) {
 			}
 			elemDescription += fmt.Sprintf("\n    \t%s", m.description)
 			if m.defValue != nil {
-				elemDescription += fmt.Sprintf(" (default %q)", *m.defValue)
+				elemDescription += fmt.Sprintf("\n    \tDefault: %q", *m.defValue)
 			}
+			elemDescription += fmt.Sprintf("\n    \tRequired: %t", m.required)
+
 			description += elemDescription
 		}
 	}

@@ -753,9 +753,9 @@ func TestGetDescription(t *testing.T) {
 			cfg:    &testSingleEnv{},
 			header: nil,
 			want: "Environment variables:" +
-				"\n  ONE int\n    \tone" +
-				"\n  TWO int\n    \ttwo" +
-				"\n  THREE int\n    \tthree",
+				"\n  ONE int\n    \tone\n    \tRequired: false" +
+				"\n  TWO int\n    \ttwo\n    \tRequired: false" +
+				"\n  THREE int\n    \tthree\n    \tRequired: false",
 			wantErr: false,
 		},
 
@@ -764,10 +764,10 @@ func TestGetDescription(t *testing.T) {
 			cfg:    &testSeveralEnv{},
 			header: nil,
 			want: "Environment variables:" +
-				"\n  ONE int\n    \tone" +
-				"\n  ENO int (alternative to ONE)\n    \tone" +
-				"\n  TWO int\n    \ttwo" +
-				"\n  OWT int (alternative to TWO)\n    \ttwo",
+				"\n  ONE int\n    \tone\n    \tRequired: false" +
+				"\n  ENO int (alternative to ONE)\n    \tone\n    \tRequired: false" +
+				"\n  TWO int\n    \ttwo\n    \tRequired: false" +
+				"\n  OWT int (alternative to TWO)\n    \ttwo\n    \tRequired: false",
 			wantErr: false,
 		},
 
@@ -776,9 +776,9 @@ func TestGetDescription(t *testing.T) {
 			cfg:    &testDefaultEnv{},
 			header: nil,
 			want: "Environment variables:" +
-				"\n  ONE int\n    \tone (default \"1\")" +
-				"\n  TWO int\n    \ttwo (default \"2\")" +
-				"\n  THREE int\n    \tthree (default \"3\")",
+				"\n  ONE int\n    \tone\n    \tDefault: \"1\"\n    \tRequired: false" +
+				"\n  TWO int\n    \ttwo\n    \tDefault: \"2\"\n    \tRequired: false" +
+				"\n  THREE int\n    \tthree\n    \tDefault: \"3\"\n    \tRequired: false",
 			wantErr: false,
 		},
 
@@ -787,8 +787,8 @@ func TestGetDescription(t *testing.T) {
 			cfg:    &testDeep{},
 			header: nil,
 			want: "Environment variables:" +
-				"\n  ONE int\n    \tone" +
-				"\n  TWO int\n    \ttwo",
+				"\n  ONE int\n    \tone\n    \tRequired: false" +
+				"\n  TWO int\n    \ttwo\n    \tRequired: false",
 			wantErr: false,
 		},
 
@@ -805,9 +805,9 @@ func TestGetDescription(t *testing.T) {
 			cfg:    &testSingleEnv{},
 			header: &header,
 			want: "test header:" +
-				"\n  ONE int\n    \tone" +
-				"\n  TWO int\n    \ttwo" +
-				"\n  THREE int\n    \tthree",
+				"\n  ONE int\n    \tone\n    \tRequired: false" +
+				"\n  TWO int\n    \ttwo\n    \tRequired: false" +
+				"\n  THREE int\n    \tthree\n    \tRequired: false",
 			wantErr: false,
 		},
 
@@ -824,11 +824,11 @@ func TestGetDescription(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := GetDescription(tt.cfg, tt.header)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("wrong error behavior %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("case %q: wrong error behavior %v, wantErr %v", tt.name, err, tt.wantErr)
 				return
 			}
 			if got != tt.want {
-				t.Errorf("wrong description text %s, want %s", got, tt.want)
+				t.Errorf("case %q: wrong description text:\n %s\n want:\n %s", tt.name, got, tt.want)
 			}
 		})
 	}
@@ -854,9 +854,9 @@ func TestFUsage(t *testing.T) {
 			headerText: nil,
 			usageTexts: nil,
 			want: "Environment variables:" +
-				"\n  ONE int\n    \tone" +
-				"\n  TWO int\n    \ttwo" +
-				"\n  THREE int\n    \tthree\n",
+				"\n  ONE int\n    \tone\n    \tRequired: false" +
+				"\n  TWO int\n    \ttwo\n    \tRequired: false" +
+				"\n  THREE int\n    \tthree\n    \tRequired: false\n",
 		},
 
 		{
@@ -864,9 +864,9 @@ func TestFUsage(t *testing.T) {
 			headerText: &customHeader,
 			usageTexts: nil,
 			want: "test header:" +
-				"\n  ONE int\n    \tone" +
-				"\n  TWO int\n    \ttwo" +
-				"\n  THREE int\n    \tthree\n",
+				"\n  ONE int\n    \tone\n    \tRequired: false" +
+				"\n  TWO int\n    \ttwo\n    \tRequired: false" +
+				"\n  THREE int\n    \tthree\n    \tRequired: false\n",
 		},
 
 		{
@@ -879,9 +879,9 @@ func TestFUsage(t *testing.T) {
 			},
 			want: "test1\ntest2\ntest3\n" +
 				"\nEnvironment variables:" +
-				"\n  ONE int\n    \tone" +
-				"\n  TWO int\n    \ttwo" +
-				"\n  THREE int\n    \tthree\n",
+				"\n  ONE int\n    \tone\n    \tRequired: false" +
+				"\n  TWO int\n    \ttwo\n    \tRequired: false" +
+				"\n  THREE int\n    \tthree\n    \tRequired: false\n",
 		},
 
 		{
@@ -894,9 +894,9 @@ func TestFUsage(t *testing.T) {
 			},
 			want: "test1\ntest2\ntest3\n" +
 				"\ntest header:" +
-				"\n  ONE int\n    \tone" +
-				"\n  TWO int\n    \ttwo" +
-				"\n  THREE int\n    \tthree\n",
+				"\n  ONE int\n    \tone\n    \tRequired: false" +
+				"\n  TWO int\n    \ttwo\n    \tRequired: false" +
+				"\n  THREE int\n    \tthree\n    \tRequired: false\n",
 		},
 	}
 	for _, tt := range tests {
@@ -916,7 +916,7 @@ func TestFUsage(t *testing.T) {
 			got := string(gotRaw)
 
 			if got != tt.want {
-				t.Errorf("wrong output %v, want %v", got, tt.want)
+				t.Errorf("wrong output\n %v, want\n %v", got, tt.want)
 			}
 		})
 	}
