@@ -1,6 +1,7 @@
 package cleanenv_test
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -193,6 +194,36 @@ func Example_setter() {
 	cleanenv.ReadEnv(&cfg)
 	fmt.Printf("%+v\n", cfg)
 	//Output: {Default:test1 Custom:my field is: test2}
+}
+
+// MyCustomStruct is an example type with a custom setter on a struct with
+// private fields only.
+type MyCustomStruct struct {
+	priv string
+}
+
+func (cs *MyCustomStruct) SetValue(s string) error {
+	if s == "" {
+		return errors.New("empty value")
+	}
+	cs.priv = s
+	return nil
+}
+
+func (cs *MyCustomStruct) String() string {
+	return cs.priv
+}
+
+func Example_structsetter() {
+	type config struct {
+		Custom MyCustomStruct `env:"CUSTOM"`
+	}
+
+	var cfg config
+	os.Setenv("CUSTOM", "test")
+	cleanenv.ReadEnv(&cfg)
+	fmt.Println(cfg.Custom.String())
+	//Output: test
 }
 
 // ConfigUpdate is a type with a custom updater

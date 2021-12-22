@@ -238,15 +238,27 @@ func readStructMetadata(cfgRoot interface{}) ([]structMeta, error) {
 
 			// process nested structure (except of time.Time)
 			if fld := s.Field(idx); fld.Kind() == reflect.Struct {
-				// add structure to parsing stack
-				if fld.Type() != reflect.TypeOf(time.Time{}) {
-					prefix, _ := fType.Tag.Lookup(TagEnvPrefix)
-					cfgStack = append(cfgStack, cfgNode{fld.Addr().Interface(), sPrefix + prefix})
-					continue
+				// check if type implements a custom setter
+				canSet := false
+				if fld.CanInterface() {
+					if _, ok := fld.Interface().(Setter); ok {
+						canSet = true
+					} else if _, ok := fld.Addr().Interface().(Setter); ok {
+						canSet = true
+					}
 				}
-				// process time.Time
-				if l, ok := fType.Tag.Lookup(TagEnvLayout); ok {
-					layout = &l
+
+				if !canSet {
+					// add structure to parsing stack
+					if fld.Type() != reflect.TypeOf(time.Time{}) {
+						prefix, _ := fType.Tag.Lookup(TagEnvPrefix)
+						cfgStack = append(cfgStack, cfgNode{fld.Addr().Interface(), sPrefix + prefix})
+						continue
+					}
+					// process time.Time
+					if l, ok := fType.Tag.Lookup(TagEnvLayout); ok {
+						layout = &l
+					}
 				}
 			}
 
