@@ -87,7 +87,7 @@ type Updater interface {
 //	 }
 func ReadConfig(path string, cfg interface{}) error {
 	err := parseFile(path, cfg)
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), "EOF") && !strings.Contains(err.Error(), "no such file or directory") {
 		return err
 	}
 
