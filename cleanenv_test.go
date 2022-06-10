@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"reflect"
 	"testing"
@@ -310,6 +311,68 @@ func TestReadEnvVars(t *testing.T) {
 				t.Errorf("wrong error behavior %v, wantErr %v", err, tt.wantErr)
 			}
 			if !reflect.DeepEqual(tt.cfg, tt.want) {
+				t.Errorf("wrong data %v, want %v", tt.cfg, tt.want)
+			}
+		})
+	}
+}
+
+func TestReadEnvVarsURL(t *testing.T) {
+	urlFunc := func(u string) url.URL {
+		parsed, err := url.Parse(u)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return *parsed
+	}
+
+	type WithURL struct {
+		DatabaseURL url.URL `env:"DB_URL"`
+	}
+
+	tests := []struct {
+		name    string
+		env     map[string]string
+		cfg     interface{}
+		want    interface{}
+		wantErr bool
+	}{
+		{
+			name: "time",
+			env: map[string]string{
+				"DB_URL": "://:password@invalid-url:port/db-name",
+			},
+			cfg: &WithURL{},
+			want: &WithURL{
+				DatabaseURL: url.URL{},
+			},
+			wantErr: true,
+		},
+		{
+			name: "time",
+			env: map[string]string{
+				"DB_URL": "postgres://user:password@host:1234/db-name",
+			},
+			cfg: &WithURL{},
+			want: &WithURL{
+				DatabaseURL: urlFunc("postgres://user:password@host:1234/db-name"),
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			for env, val := range tt.env {
+				os.Setenv(env, val)
+			}
+			defer os.Clearenv()
+
+			if err := readEnvVars(tt.cfg, false); (err != nil) != tt.wantErr {
+				t.Errorf("wrong error behavior %v, wantErr %v", err, tt.wantErr)
+			}
+			if !reflect.DeepEqual(tt.cfg, tt.want) {
+				fmt.Println(tt.cfg.(*WithURL).DatabaseURL)
 				t.Errorf("wrong data %v, want %v", tt.cfg, tt.want)
 			}
 		})
@@ -824,11 +887,11 @@ func TestGetDescription(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := GetDescription(tt.cfg, tt.header)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("wrong error behavior %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("%s: wrong error behavior %v, wantErr %v", tt.name, err, tt.wantErr)
 				return
 			}
 			if got != tt.want {
-				t.Errorf("wrong description text %s, want %s", got, tt.want)
+				t.Errorf("%s: wrong description text %s, want %s", tt.name, got, tt.want)
 			}
 		})
 	}
