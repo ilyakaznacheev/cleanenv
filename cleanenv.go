@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -200,6 +201,35 @@ func (sm *structMeta) isFieldValueZero() bool {
 	return isZero(sm.fieldValue)
 }
 
+// parseFunc custom value parser function
+type parseFunc func(*reflect.Value, string, *string) error
+
+// Any specific supported struct can be added here
+var validStructs = map[reflect.Type]parseFunc{
+	reflect.TypeOf(time.Time{}): func(field *reflect.Value, value string, layout *string) error {
+		var l string
+		if layout != nil {
+			l = *layout
+		} else {
+			l = time.RFC3339
+		}
+		val, err := time.Parse(l, value)
+		if err != nil {
+			return err
+		}
+		field.Set(reflect.ValueOf(val))
+		return nil
+	},
+	reflect.TypeOf(url.URL{}): func(field *reflect.Value, value string, _ *string) error {
+		val, err := url.Parse(value)
+		if err != nil {
+			return err
+		}
+		field.Set(reflect.ValueOf(*val))
+		return nil
+	},
+}
+
 // readStructMetadata reads structure metadata (types, tags, etc.)
 func readStructMetadata(cfgRoot interface{}) ([]structMeta, error) {
 	type cfgNode struct {
@@ -236,10 +266,10 @@ func readStructMetadata(cfgRoot interface{}) ([]structMeta, error) {
 				separator string
 			)
 
-			// process nested structure (except of time.Time)
+			// process nested structure (except of supported ones)
 			if fld := s.Field(idx); fld.Kind() == reflect.Struct {
 				// add structure to parsing stack
-				if fld.Type() != reflect.TypeOf(time.Time{}) {
+				if _, found := validStructs[fld.Type()]; !found {
 					prefix, _ := fType.Tag.Lookup(TagEnvPrefix)
 					cfgStack = append(cfgStack, cfgNode{fld.Addr().Interface(), sPrefix + prefix})
 					continue
@@ -432,20 +462,8 @@ func parseValue(field reflect.Value, value, sep string, layout *string) error {
 		field.Set(*mapValue)
 
 	case reflect.Struct:
-		// process time.Time only
-		if valueType.PkgPath() == "time" && valueType.Name() == "Time" {
-
-			var l string
-			if layout != nil {
-				l = *layout
-			} else {
-				l = time.RFC3339
-			}
-			val, err := time.Parse(l, value)
-			if err != nil {
-				return err
-			}
-			field.Set(reflect.ValueOf(val))
+		if structParser, found := validStructs[valueType]; found {
+			return structParser(&field, value, layout)
 		}
 
 	default:

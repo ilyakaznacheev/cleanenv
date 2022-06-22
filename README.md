@@ -65,7 +65,7 @@ There are just several actions you can do with this tool and probably only thing
 You can read a configuration file and environment variables in a single function call.
 
 ```go
-import github.com/ilyakaznacheev/cleanenv
+import "github.com/ilyakaznacheev/cleanenv"
 
 type ConfigDatabase struct {
     Port     string `yaml:"port" env:"PORT" env-default:"5432"`
@@ -94,7 +94,7 @@ This will do the following:
 Sometimes you don't want to use configuration files at all, or you may want to use `.env` file format instead. Thus, you can limit yourself with only reading environment variables:
 
 ```go 
-import github.com/ilyakaznacheev/cleanenv
+import "github.com/ilyakaznacheev/cleanenv"
 
 type ConfigDatabase struct {
     Port     string `env:"PORT" env-default:"5432"`
@@ -117,7 +117,7 @@ if err != nil {
 Some environment variables may change during the application run. To get the new values you need to mark these variables as updatable with the tag `env-upd` and then run the update function:
 
 ```go
-import github.com/ilyakaznacheev/cleanenv
+import "github.com/ilyakaznacheev/cleanenv"
 
 type ConfigRemote struct {
     Port     string `env:"PORT" env-upd`
@@ -144,7 +144,7 @@ Here remote host and port may change in a distributed system architecture. Field
 You can get descriptions of all environment variables to use them in the help documentation.
 
 ```go
-import github.com/ilyakaznacheev/cleanenv
+import "github.com/ilyakaznacheev/cleanenv"
 
 type ConfigServer struct {
     Port     string `env:"PORT" env-description:"server port"`
