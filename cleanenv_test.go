@@ -322,6 +322,61 @@ func TestReadEnvVars(t *testing.T) {
 	}
 }
 
+type ptrTypes struct {
+	Boolean *bool `env:"TEST_BOOLEAN" env-default:"true"`
+	Integer *int  `env:"TEST_INTEGER" env-default:"42"`
+}
+
+func (p ptrTypes) String() string {
+	return fmt.Sprintf("Boolean=%v, Integer=%v", *p.Boolean, *p.Integer)
+}
+
+func TestReadEnvVarsPtr(t *testing.T) {
+	bf := false
+	bt := true
+	i27 := 27
+	i42 := 42
+	tests := []struct {
+		name    string
+		env     map[string]string
+		cfg     *ptrTypes
+		want    *ptrTypes
+		wantErr bool
+	}{
+		{
+			name:    "defaults",
+			cfg:     &ptrTypes{},
+			want:    &ptrTypes{Boolean: &bt, Integer: &i42},
+			wantErr: false,
+		},
+		{
+			name: "set boolean",
+			env: map[string]string{
+				"TEST_BOOLEAN": "false",
+				"TEST_INTEGER": "27",
+			},
+			cfg:     &ptrTypes{},
+			want:    &ptrTypes{Boolean: &bf, Integer: &i27},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		for env, val := range tt.env {
+			os.Setenv(env, val)
+		}
+		defer os.Clearenv()
+
+		if err := readEnvVars(tt.cfg, false); (err != nil) != tt.wantErr {
+			t.Errorf("wrong error behavior %v, wantErr %v", err, tt.wantErr)
+		}
+
+		if !reflect.DeepEqual(tt.cfg, tt.want) {
+			t.Errorf("wrong data %v, want %v", tt.cfg, tt.want)
+		}
+	}
+}
+
 func TestReadEnvVarsURL(t *testing.T) {
 	urlFunc := func(u string) url.URL {
 		parsed, err := url.Parse(u)
@@ -1191,8 +1246,8 @@ func TestTimeLocation(t *testing.T) {
 func TestSkipUnexportedField(t *testing.T) {
 	conf := struct {
 		Database struct {
-			Host        string `yaml:"host" env:"DB_HOST" env-description:"Database host"`
-			Port        string `yaml:"port" env:"DB_PORT" env-description:"Database port"`
+			Host string `yaml:"host" env:"DB_HOST" env-description:"Database host"`
+			Port string `yaml:"port" env:"DB_PORT" env-description:"Database port"`
 		} `yaml:"database"`
 		server struct {
 			Host string `yaml:"host" env:"SRV_HOST,HOST" env-description:"Server host" env-default:"localhost"`
