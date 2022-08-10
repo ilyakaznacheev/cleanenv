@@ -1119,19 +1119,68 @@ no-env: this
 		},
 
 		{
-			name:    "unknown",
-			file:    "-",
-			ext:     "",
+			name: "unknown filetype fallback to env",
+			file: "-",
+			ext:  "",
+			env: map[string]string{
+				"TEST_NUMBER": "3",
+				"TEST_STRING": "fromEnv",
+			},
+			want: &config{
+				Number:    3,
+				String:    "fromEnv",
+				NoDefault: "",
+				NoEnv:     "default",
+			},
+			wantErr: false,
+		},
+		{
+			name: "parsing error fallback to env",
+			file: "-",
+			ext:  "json",
+			env: map[string]string{
+				"TEST_NUMBER": "3",
+				"TEST_STRING": "fromEnv",
+			},
+			want: &config{
+				Number:    3,
+				String:    "fromEnv",
+				NoDefault: "",
+				NoEnv:     "default",
+			},
+			wantErr: false,
+		},
+		{
+			name: "file and env parse error",
+			file: "-",
+			ext:  "json",
+			env: map[string]string{
+				"TEST_NUMBER": "five hundred",
+				"TEST_STRING": "fromEnv",
+			},
 			want:    nil,
 			wantErr: true,
 		},
-
 		{
-			name:    "parsing error",
-			file:    "-",
-			ext:     "json",
-			want:    nil,
-			wantErr: true,
+			name: "parsed file and failed to parse env",
+			file: `
+number: 2
+string: test
+no-default: NoDefault
+no-env: this
+`,
+			ext: "yaml",
+			env: map[string]string{
+				"TEST_NUMBER": "five hundred",
+				"TEST_STRING": "fromEnv",
+			},
+			want: &config{
+				Number:    2,
+				String:    "test",
+				NoDefault: "NoDefault",
+				NoEnv:     "this",
+			},
+			wantErr: false,
 		},
 	}
 
