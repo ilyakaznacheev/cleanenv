@@ -68,7 +68,7 @@ type Updater interface {
 }
 
 // ReadConfig reads configuration file and parses it depending on tags in structure provided.
-// Then it reads and parses
+// Then it reads and parses configuration from environment variable
 //
 // Example:
 //
@@ -88,11 +88,14 @@ type Updater interface {
 //	 }
 func ReadConfig(path string, cfg interface{}) error {
 	err := parseFile(path, cfg)
-	if err != nil {
-		return err
-	}
 
-	return readEnvVars(cfg, false)
+	if envErr := readEnvVars(cfg, false); envErr != nil {
+		if err != nil {
+			return fmt.Errorf("%s: %w", envErr.Error(), err)
+		}
+		return envErr
+	}
+	return err
 }
 
 // ReadEnv reads environment variables into the structure.
