@@ -93,9 +93,9 @@ func ReadConfig(path string, cfg interface{}) error {
 		if err != nil {
 			return fmt.Errorf("%s: %w", envErr.Error(), err)
 		}
-		return envErr
 	}
-	return err
+
+	return nil
 }
 
 // ReadEnv reads environment variables into the structure.
