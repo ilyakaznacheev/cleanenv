@@ -1167,7 +1167,6 @@ no-env: this
 number: 2
 string: test
 no-default: NoDefault
-no-env: this
 `,
 			ext: "yaml",
 			env: map[string]string{
@@ -1178,7 +1177,7 @@ no-env: this
 				Number:    2,
 				String:    "test",
 				NoDefault: "NoDefault",
-				NoEnv:     "this",
+				NoEnv:     "default",
 			},
 			wantErr: false,
 		},
