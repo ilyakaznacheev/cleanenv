@@ -1224,7 +1224,8 @@ func TestReadDefaults(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		want    *goodMetadataConfig
+		want    interface{}
+		cfg     interface{}
 		wantErr bool
 	}{
 		{
@@ -1234,31 +1235,23 @@ func TestReadDefaults(t *testing.T) {
 				String:    "default",
 				NoDefault: "",
 			},
+			cfg:     &goodMetadataConfig{},
 			wantErr: false,
 		},
 		{
 			name:    "fails to read default values due to bad type",
 			want:    nil,
+			cfg:     &badMetadataConfig{},
 			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var goodConfig goodMetadataConfig
-			var badConfig badMetadataConfig
-
-			var err error
-			if tt.want != nil {
-				err = readDefaults(&goodConfig)
-			} else {
-				err = readDefaults(&badConfig)
-			}
-
-			if (err != nil) != tt.wantErr {
+			if err := readDefaults(tt.cfg); (err != nil) != tt.wantErr {
 				t.Errorf("wrong error behavior %v, wantErr %v", err, tt.wantErr)
-			} else if err == nil && !tt.wantErr && !reflect.DeepEqual(&goodConfig, tt.want) {
-				t.Errorf("wrong data %v, want %v", &goodConfig, tt.want)
+			} else if err == nil && !reflect.DeepEqual(tt.cfg, tt.want) {
+				t.Errorf("wrong data %v, want %v", tt.cfg, tt.want)
 			}
 		})
 	}
