@@ -1211,3 +1211,55 @@ no-default: NoDefault
 		})
 	}
 }
+
+func TestReadDefaults(t *testing.T) {
+	type goodMetadataConfig struct {
+		Number    int64  `env-default:"1"`
+		String    string `env-default:"default"`
+		NoDefault string
+	}
+	type badMetadataConfig struct {
+		Number int64 `env-default:"one"`
+	}
+
+	tests := []struct {
+		name    string
+		want    *goodMetadataConfig
+		wantErr bool
+	}{
+		{
+			name: "successfully reads default values",
+			want: &goodMetadataConfig{
+				Number:    1,
+				String:    "default",
+				NoDefault: "",
+			},
+			wantErr: false,
+		},
+		{
+			name:    "fails to read default values due to bad type",
+			want:    nil,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var goodConfig goodMetadataConfig
+			var badConfig badMetadataConfig
+
+			var err error
+			if tt.want != nil {
+				err = readDefaults(&goodConfig)
+			} else {
+				err = readDefaults(&badConfig)
+			}
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("wrong error behavior %v, wantErr %v", err, tt.wantErr)
+			} else if err == nil && !tt.wantErr && !reflect.DeepEqual(&goodConfig, tt.want) {
+				t.Errorf("wrong data %v, want %v", &goodConfig, tt.want)
+			}
+		})
+	}
+}
