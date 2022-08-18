@@ -243,11 +243,15 @@ func (c *Config) Update() error {
 
 There are several most popular config file formats supported:
 
-- YAML
-- JSON
-- TOML
-- ENV
-- EDN
+- YAML (`.yaml`, `.yml`)
+- JSON (`.json`)
+- TOML (`.toml`)
+- EDN (`.edn`)
+- ENV (`.env`)
+
+**Note**:
+- while using `.env` file the library will set corresponding data to process environment variables.
+  It will override existing variables with the same keys in the process environment.
 
 ## Integration
 
