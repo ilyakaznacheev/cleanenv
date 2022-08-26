@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/ilyakaznacheev/cleanenv"
+	"github.com/yourheropaul/cleanenv"
 )
 
 // ExampleGetDescription builds a description text from structure tags
