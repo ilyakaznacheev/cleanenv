@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"math"
 	"net/url"
 	"os"
@@ -95,6 +96,42 @@ func ReadConfig(path string, cfg interface{}) error {
 	return readEnvVars(cfg, false)
 }
 
+// ReadConfig reads configuration file from a filesystem and parses it
+// depending on tags in structure provided. Then it reads and parses
+//
+// Example:
+//
+//	 type ConfigDatabase struct {
+//	 	Port     string `yaml:"port" env:"PORT" env-default:"5432"`
+//	 	Host     string `yaml:"host" env:"HOST" env-default:"localhost"`
+//	 	Name     string `yaml:"name" env:"NAME" env-default:"postgres"`
+//	 	User     string `yaml:"user" env:"USER" env-default:"user"`
+//	 	Password string `yaml:"password" env:"PASSWORD"`
+//	 }
+//
+//   go:embed config.yml
+//   var fs embed.FS
+
+//	 var cfg ConfigDatabase
+//
+//	 err := cleanenv.ReadConfigFS(fs, "config.yml", &cfg)
+//	 if err != nil {
+//	     ...
+//	 }
+
+func ReadConfigFS(fs fs.FS, path string, cfg interface{}) error {
+	file, err := fs.Open(path)
+	if err != nil {
+		return err
+	}
+
+	if err := parseReader(path, file, cfg); err != nil {
+		return err
+	}
+
+	return readEnvVars(cfg, false)
+}
+
 // ReadEnv reads environment variables into the structure.
 func ReadEnv(cfg interface{}) error {
 	return readEnvVars(cfg, false)
@@ -126,6 +163,10 @@ func parseFile(path string, cfg interface{}) error {
 	}
 	defer f.Close()
 
+	return parseReader(path, f, cfg)
+}
+
+func parseReader(path string, f io.Reader, cfg interface{}) (err error) {
 	// parse the file depending on the file type
 	switch ext := strings.ToLower(filepath.Ext(path)); ext {
 	case ".yaml", ".yml":
