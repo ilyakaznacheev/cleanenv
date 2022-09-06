@@ -96,6 +96,11 @@ func ReadConfig(path string, cfg interface{}, namespace ...string) error {
 }
 
 // ReadEnv reads environment variables into the structure.
+// For overlapping use of same environment variable names,
+// it can take the namespace parameter to provide a variable
+// name prefix. This allows for multiple versions of the
+// same configuration field to be available from the
+// environment. See documentation and examples for details.
 func ReadEnv(cfg interface{}, namespace ...string) error {
 	return readEnvVars(cfg, false, namespace...)
 }
