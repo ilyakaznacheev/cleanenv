@@ -25,7 +25,7 @@ func ExampleGetDescription() {
 	}
 
 	fmt.Println(text)
-	//Output: Environment variables:
+	// Output: Environment variables:
 	//   ONE int64
 	//     	first parameter
 	//   TWO float64
@@ -50,7 +50,7 @@ func ExampleGetDescription_defaults() {
 	}
 
 	fmt.Println(text)
-	//Output: Environment variables:
+	// Output: Environment variables:
 	//   ONE int64
 	//     	first parameter (default "1")
 	//   TWO float64
@@ -73,7 +73,7 @@ func ExampleGetDescription_variableList() {
 	}
 
 	fmt.Println(text)
-	//Output: Environment variables:
+	// Output: Environment variables:
 	//   ONE int64
 	//     	first found parameter
 	//   TWO int64 (alternative to ONE)
@@ -100,7 +100,7 @@ func ExampleGetDescription_customHeaderText() {
 	}
 
 	fmt.Println(text)
-	//Output: Custom header text:
+	// Output: Custom header text:
 	//   ONE int64
 	//     	first parameter
 	//   TWO float64
@@ -135,7 +135,7 @@ func ExampleUpdateEnv() {
 	cleanenv.UpdateEnv(&cfg)
 	fmt.Printf("%+v\n", cfg)
 
-	//Output: {One:1 Two:2}
+	// Output: {One:1 Two:2}
 	// {One:1 Two:22}
 
 }
@@ -160,7 +160,7 @@ func ExampleReadEnv() {
 	cleanenv.ReadEnv(&cfg)
 	fmt.Printf("%+v\n", cfg)
 
-	//Output: {Port:5050 Host:localhost Name:redis User:tester Password:*****}
+	// Output: {Port:5050 Host:localhost Name:redis User:tester Password:*****}
 }
 
 // ExampleReadEnv reads environment variables or default values into the structure
@@ -176,7 +176,30 @@ func ExampleReadEnvWithURL() {
 	cleanenv.ReadEnv(&cfg)
 	fmt.Printf("%+v\n", cfg.ImageCDN.String())
 
-	//Output: https://images.cdn/
+	// Output: https://images.cdn/
+}
+
+// ExampleReadEnvWithNamespace reads environment variables prefixed with the given string
+func ExampleReadEnvWithNamespace() {
+	type commonConfig struct {
+		Endpoint string `env:"ENDPOINT"`
+	}
+
+	var cfg1 commonConfig
+	var cfg2 commonConfig
+
+	os.Setenv("SERVICE1_ENDPOINT", "https://example.com/api/v1/doit")
+	os.Setenv("SERVICE2_ENDPOINT", "https://somewhere.else.entire.ly:8011/getit/here")
+
+	cleanenv.ReadEnv(&cfg1, "SERVICE1_")
+	cleanenv.ReadEnv(&cfg2, "SERVICE2_")
+	fmt.Printf("%+v\n", cfg1)
+	fmt.Printf("%+v\n", cfg2)
+
+	// Output:
+	//
+	// {Endpoint:https://example.com/api/v1/doit}
+	// {Endpoint:https://somewhere.else.entire.ly:8011/getit/here}
 }
 
 // MyField is an example type with a custom setter
@@ -208,7 +231,7 @@ func Example_setter() {
 
 	cleanenv.ReadEnv(&cfg)
 	fmt.Printf("%+v\n", cfg)
-	//Output: {Default:test1 Custom:my field is: test2}
+	// Output: {Default:test1 Custom:my field is: test2}
 }
 
 // ConfigUpdate is a type with a custom updater
@@ -230,11 +253,11 @@ func Example_updater() {
 
 	cleanenv.ReadEnv(&cfg)
 	fmt.Printf("%+v\n", cfg)
-	//Output: {Default:default Custom:custom}
+	// Output: {Default:default Custom:custom}
 }
 
 func ExampleUsage() {
-	os.Stderr = os.Stdout //replace STDERR with STDOUT for test
+	os.Stderr = os.Stdout // replace STDERR with STDOUT for test
 
 	type config struct {
 		One   int64   `env:"ONE" env-description:"first parameter"`
@@ -257,7 +280,7 @@ func ExampleUsage() {
 	// print usage to STDERR
 	u()
 
-	//Output: Usage of Example:
+	// Output: Usage of Example:
 	//   -h string
 	//     	service host (default "localhost")
 	//   -p string

@@ -86,23 +86,23 @@ type Updater interface {
 //	 if err != nil {
 //	     ...
 //	 }
-func ReadConfig(path string, cfg interface{}) error {
+func ReadConfig(path string, cfg interface{}, namespace ...string) error {
 	err := parseFile(path, cfg)
 	if err != nil {
 		return err
 	}
 
-	return readEnvVars(cfg, false)
+	return readEnvVars(cfg, false, namespace...)
 }
 
 // ReadEnv reads environment variables into the structure.
-func ReadEnv(cfg interface{}) error {
-	return readEnvVars(cfg, false)
+func ReadEnv(cfg interface{}, namespace ...string) error {
+	return readEnvVars(cfg, false, namespace...)
 }
 
 // UpdateEnv rereads (updates) environment variables in the structure.
-func UpdateEnv(cfg interface{}) error {
-	return readEnvVars(cfg, true)
+func UpdateEnv(cfg interface{}, namespace ...string) error {
+	return readEnvVars(cfg, true, namespace...)
 }
 
 // parseFile parses configuration file according to it's extension
@@ -231,7 +231,7 @@ var validStructs = map[reflect.Type]parseFunc{
 }
 
 // readStructMetadata reads structure metadata (types, tags, etc.)
-func readStructMetadata(cfgRoot interface{}) ([]structMeta, error) {
+func readStructMetadata(cfgRoot interface{}, namespace ...string) ([]structMeta, error) {
 	type cfgNode struct {
 		Val    interface{}
 		Prefix string
@@ -303,9 +303,10 @@ func readStructMetadata(cfgRoot interface{}) ([]structMeta, error) {
 
 			if envs, ok := fType.Tag.Lookup(TagEnv); ok && len(envs) != 0 {
 				envList = strings.Split(envs, DefaultSeparator)
-				if sPrefix != "" {
+				if sPrefix != "" || len(namespace) > 0 {
+					envNs := strings.Join(namespace, "")
 					for i := range envList {
-						envList[i] = sPrefix + envList[i]
+						envList[i] = envNs + sPrefix + envList[i]
 					}
 				}
 			}
@@ -329,8 +330,8 @@ func readStructMetadata(cfgRoot interface{}) ([]structMeta, error) {
 }
 
 // readEnvVars reads environment variables to the provided configuration structure
-func readEnvVars(cfg interface{}, update bool) error {
-	metaInfo, err := readStructMetadata(cfg)
+func readEnvVars(cfg interface{}, update bool, namespace ...string) error {
+	metaInfo, err := readStructMetadata(cfg, namespace...)
 	if err != nil {
 		return err
 	}

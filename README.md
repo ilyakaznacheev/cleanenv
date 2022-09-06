@@ -167,6 +167,62 @@ Environment variables:
   HOST  server host
 ```
 
+### Namespacing
+
+While several configuration sets are easily managed with configuration files,
+supporting them with environment variables is tricky.
+
+Consider a program, that has several internal modules,
+which in turn use the same backend service, but with different configurations.
+Each module could have its own configuration file,
+but if configuration is passed in the environment variables,
+you would need as many versions of the configuration structure as you have modules.
+
+```go
+type ServiceConfiguration struct {
+    Host    string  `env:"HOST"`
+    Port    string  `env:"PORT"`
+}
+
+type AnotherModuleServiceConfiguration
+    Host    string  `env:"MODULE_HOST"`
+    Port    string  `env:"MODULE_PORT"`
+}
+
+...
+var firstSvcCfg ServiceConfiguration
+var secondSvcCfg AnotherModuleServiceConfiguration
+
+cleanenv.ReadEnv(&firstSvcCfg)
+cleanenv.ReadEnv(&secondSvcCfg)
+...
+```
+
+With `cleanenv` you can have one configuration definition struct,
+and define a namespace with `cleanenv.ReadEnv`/`cleanenv.ReadConfig`:
+
+```go
+// Environment:
+//   FIRST_MODULE_HOST=example.com
+//   FIRST_MODULE_PORT=12000
+//   SECOND_MODULE_HOST=someother.host.io
+//   SECOND_MODULE_PORT=10001
+
+type ServiceConfiguration struct {
+    Host    string  `env:"HOST"`
+    Port    string  `env:"PORT"`
+}
+
+var firstSvcCfg, secondSvcCfg ServiceConfiguration
+
+cleanenv.ReadEnv(&firstSvcCfg, "FIRST_MODULE_")
+cleanenv.ReadEnv(&secondSvcCfg, "SECOND_MODULE_")
+
+// firstSvcCfg.Host == example.com
+// secondSvcCfg.Host == someother.host.io
+// ...
+```
+
 ## Model Format
 
 Library uses tags to configure the model of configuration structure. There are the following tags:
