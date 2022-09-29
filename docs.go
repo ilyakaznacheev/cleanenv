@@ -1,7 +1,7 @@
 /*
 Package cleanenv gives you a single tool to read application configuration from several sources with ease.
 
-Features
+# Features
 
 - read from several file formats (YAML, JSON, TOML, ENV, EDN) and parse into the internal structure;
 
@@ -11,7 +11,7 @@ Features
 
 - custom variable readers (e.g. if you want to read from remote config server, etc).
 
-Usage
+# Usage
 
 You can just prepare the config structure and fill it from the config file and environment variables.
 
@@ -24,7 +24,7 @@ You can just prepare the config structure and fill it from the config file and e
 
 	ReadConfig("config.yml", &cfg)
 
-Help output
+# Help output
 
 You can list all of your environment variables by means of help output:
 

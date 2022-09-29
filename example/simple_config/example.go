@@ -13,12 +13,12 @@ import (
 // Config is a application configuration structure
 type Config struct {
 	Database struct {
-		Host        string `yaml:"host" env:"DB_HOST" env-description:"Database host"`
-		Port        string `yaml:"port" env:"DB_PORT" env-description:"Database port"`
-		Username    string `yaml:"username" env:"DB_USER" env-description:"Database user name"`
-		Password    string `env:"DB_PASSWORD" env-description:"Database user password"`
-		Name        string `yaml:"db-name" env:"DB_NAME" env-description:"Database name"`
-		Connections int    `yaml:"connections" env:"DB_CONNECTIONS" env-description:"Total number of database connections"`
+		Host        string `yaml:"host"        env:"DB_HOST"                            env-description:"Database host"`
+		Port        string `yaml:"port"        env:"DB_PORT"                            env-description:"Database port"`
+		Username    string `yaml:"username"    env:"DB_USER"                            env-description:"Database user name"`
+		Password    string `env:"DB_PASSWORD"  env-description:"Database user password"`
+		Name        string `yaml:"db-name"     env:"DB_NAME"                            env-description:"Database name"`
+		Connections int    `yaml:"connections" env:"DB_CONNECTIONS"                     env-description:"Total number of database connections"`
 	} `yaml:"database"`
 	Server struct {
 		Host string `yaml:"host" env:"SRV_HOST,HOST" env-description:"Server host" env-default:"localhost"`

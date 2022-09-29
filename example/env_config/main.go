@@ -15,7 +15,7 @@ type config struct {
 	JWTSecret string        `env:"JWT_SECRET"`
 	DB        url.URL       `env:"DB"`
 	Start     time.Time     `env:"START"`
-	TTL       time.Duration `env:"TTL" env-required:"true"`
+	TTL       time.Duration `env:"TTL"        env-required:"true"`
 }
 
 func main() {

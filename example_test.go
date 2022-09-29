@@ -12,8 +12,8 @@ import (
 // ExampleGetDescription builds a description text from structure tags
 func ExampleGetDescription() {
 	type config struct {
-		One   int64   `env:"ONE" env-description:"first parameter"`
-		Two   float64 `env:"TWO" env-description:"second parameter"`
+		One   int64   `env:"ONE"   env-description:"first parameter"`
+		Two   float64 `env:"TWO"   env-description:"second parameter"`
 		Three string  `env:"THREE" env-description:"third parameter"`
 	}
 
@@ -37,9 +37,9 @@ func ExampleGetDescription() {
 // ExampleGetDescription_defaults builds a description text from structure tags with description of default values
 func ExampleGetDescription_defaults() {
 	type config struct {
-		One   int64   `env:"ONE" env-description:"first parameter" env-default:"1"`
-		Two   float64 `env:"TWO" env-description:"second parameter" env-default:"2.2"`
-		Three string  `env:"THREE" env-description:"third parameter" env-default:"test"`
+		One   int64   `env:"ONE"   env-description:"first parameter"  env-default:"1"`
+		Two   float64 `env:"TWO"   env-description:"second parameter" env-default:"2.2"`
+		Three string  `env:"THREE" env-description:"third parameter"  env-default:"test"`
 	}
 
 	var cfg config
@@ -85,8 +85,8 @@ func ExampleGetDescription_variableList() {
 // ExampleGetDescription_customHeaderText builds a description text from structure tags with custom header string
 func ExampleGetDescription_customHeaderText() {
 	type config struct {
-		One   int64   `env:"ONE" env-description:"first parameter"`
-		Two   float64 `env:"TWO" env-description:"second parameter"`
+		One   int64   `env:"ONE"   env-description:"first parameter"`
+		Two   float64 `env:"TWO"   env-description:"second parameter"`
 		Three string  `env:"THREE" env-description:"third parameter"`
 	}
 
@@ -143,10 +143,10 @@ func ExampleUpdateEnv() {
 // ExampleReadEnv reads environment variables or default values into the structure
 func ExampleReadEnv() {
 	type config struct {
-		Port     string `env:"PORT" env-default:"5432"`
-		Host     string `env:"HOST" env-default:"localhost"`
-		Name     string `env:"NAME" env-default:"postgres"`
-		User     string `env:"USER" env-default:"user"`
+		Port     string `env:"PORT"     env-default:"5432"`
+		Host     string `env:"HOST"     env-default:"localhost"`
+		Name     string `env:"NAME"     env-default:"postgres"`
+		User     string `env:"USER"     env-default:"user"`
 		Password string `env:"PASSWORD"`
 	}
 
@@ -237,8 +237,8 @@ func ExampleUsage() {
 	os.Stderr = os.Stdout //replace STDERR with STDOUT for test
 
 	type config struct {
-		One   int64   `env:"ONE" env-description:"first parameter"`
-		Two   float64 `env:"TWO" env-description:"second parameter"`
+		One   int64   `env:"ONE"   env-description:"first parameter"`
+		Two   float64 `env:"TWO"   env-description:"second parameter"`
 		Three string  `env:"THREE" env-description:"third parameter"`
 	}
 
