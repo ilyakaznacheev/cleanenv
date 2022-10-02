@@ -22,3 +22,29 @@ jobs:
           # Chose the messaging platform. 
           # slack / telegram / rocketchat / teams / pushover / discord / email
           service: telegram
+
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        go-version:
+          - 'tip'
+          - '1.19'
+          - '1.18'
+          - '1.17'
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache: true
+      - name: Install dependencies
+        run: go get .
+      - name: Test with the Go CLI
+        run: go test ./...
