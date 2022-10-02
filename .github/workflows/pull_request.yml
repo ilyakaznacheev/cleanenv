@@ -3,6 +3,7 @@ on: [pull_request]
 jobs:
   # https://github.com/kha7iq/pingme-action
   pingme-job:
+    if: false # disable this job
     runs-on: ubuntu-latest
     name: PingMe
     steps:
