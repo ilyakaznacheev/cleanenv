@@ -192,6 +192,7 @@ There are following supported types:
 - maps (of any other supported type);
 - `time.Duration`;
 - `time.Time` (layout by default is RFC3339, may be overridden by `env-layout`);
+- `*time.Location` (time zone parsing [depends](https://pkg.go.dev/time#LoadLocation) on running machine)
 - any type implementing `cleanenv.Setter` interface.
 
 
