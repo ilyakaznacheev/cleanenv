@@ -26,7 +26,8 @@ jobs:
           - ubuntu-latest
           - macos-latest
           - windows-latest
-
+    env:
+      GO111MODULE: 'on'
     steps:
       - uses: actions/checkout@v3
       - name: Setup Go
