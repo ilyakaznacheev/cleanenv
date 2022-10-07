@@ -35,6 +35,7 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
           cache: true
+          cache-dependency-path: go.sum
       - name: Install dependencies
         run: go get .
       - name: Test with the Go CLI
