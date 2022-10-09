@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"net/url"
 	"os"
 	"reflect"
@@ -77,7 +77,7 @@ func TestReadEnvVars(t *testing.T) {
 
 	type Required struct {
 		NotRequired int `env:"NOT_REQUIRED"`
-		Required    int `env:"REQUIRED"     env-required:"true"`
+		Required    int `env:"REQUIRED" env-required:"true"`
 	}
 
 	tests := []struct {
@@ -665,7 +665,7 @@ two = 2`,
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tmpFile, err := os.CreateTemp(os.TempDir(), fmt.Sprintf("*.%s", tt.ext))
+			tmpFile, err := ioutil.TempFile(os.TempDir(), fmt.Sprintf("*.%s", tt.ext))
 			if err != nil {
 				t.Fatal("cannot create temporary file:", err)
 			}
@@ -735,7 +735,7 @@ func TestParseFileEnv(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tmpFile, err := os.CreateTemp(os.TempDir(), "*.env")
+			tmpFile, err := ioutil.TempFile(os.TempDir(), "*.env")
 			if err != nil {
 				t.Fatal("cannot create temporary file:", err)
 			}
@@ -980,7 +980,7 @@ func TestFUsage(t *testing.T) {
 			}
 			var cfg testSingleEnv
 			FUsage(w, &cfg, tt.headerText, uFuncs...)()
-			gotRaw, _ := io.ReadAll(w)
+			gotRaw, _ := ioutil.ReadAll(w)
 			got := string(gotRaw)
 
 			if got != tt.want {
@@ -1142,7 +1142,7 @@ no-env: this
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tmpFile, err := os.CreateTemp(os.TempDir(), fmt.Sprintf("*.%s", tt.ext))
+			tmpFile, err := ioutil.TempFile(os.TempDir(), fmt.Sprintf("*.%s", tt.ext))
 			if err != nil {
 				t.Fatal("cannot create temporary file:", err)
 			}
@@ -1169,8 +1169,9 @@ no-env: this
 	}
 }
 
-// *time.Location is pointer type, so we need to compare it with pointer
-// reflect.DeepEqual() compares only pointer values, not structs
+// TestTimeLocation tests *time.Location parse. It is  a pointer type,
+// so we need to compare it with pointer manually,
+// because reflect.DeepEqual() compares only pointer values, not their structs
 func TestTimeLocation(t *testing.T) {
 	want := time.UTC
 
