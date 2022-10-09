@@ -159,7 +159,7 @@ func parseJSON(r io.Reader, str interface{}) error {
 
 // parseTOML parses TOML from reader to data structure
 func parseTOML(r io.Reader, str interface{}) error {
-	_, err := toml.DecodeReader(r, str)
+	_, err := toml.NewDecoder(r).Decode(str)
 	return err
 }
 
