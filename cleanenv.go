@@ -68,7 +68,7 @@ type Updater interface {
 }
 
 // ReadConfig reads configuration file and parses it depending on tags in structure provided.
-// Then it reads and parses
+// Then it reads and parses configuration from environment variable
 //
 // Example:
 //
@@ -87,12 +87,17 @@ type Updater interface {
 //	     ...
 //	 }
 func ReadConfig(path string, cfg interface{}) error {
+	readDefaults(cfg)
+
 	err := parseFile(path, cfg)
-	if err != nil {
-		return err
+
+	if envErr := readEnvVars(cfg, false); envErr != nil {
+		if err != nil {
+			return fmt.Errorf("%s: %w", envErr.Error(), err)
+		}
 	}
 
-	return readEnvVars(cfg, false)
+	return nil
 }
 
 // ReadEnv reads environment variables into the structure.
@@ -326,6 +331,29 @@ func readStructMetadata(cfgRoot interface{}) ([]structMeta, error) {
 	}
 
 	return metas, nil
+}
+
+// readDefaults reads default values to the provided configuration structure
+//
+// Note: this method will overwrite existing values in the configuration structure
+func readDefaults(cfg interface{}) error {
+	metaInfo, err := readStructMetadata(cfg)
+	if err != nil {
+		return err
+	}
+
+	for _, meta := range metaInfo {
+		rawValue := meta.defValue
+		if rawValue == nil {
+			continue
+		}
+
+		if err := parseValue(meta.fieldValue, *rawValue, meta.separator, meta.layout); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // readEnvVars reads environment variables to the provided configuration structure

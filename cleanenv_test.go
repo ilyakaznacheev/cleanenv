@@ -1119,19 +1119,67 @@ no-env: this
 		},
 
 		{
-			name:    "unknown",
-			file:    "-",
-			ext:     "",
+			name: "unknown filetype fallback to env",
+			file: "-",
+			ext:  "",
+			env: map[string]string{
+				"TEST_NUMBER": "3",
+				"TEST_STRING": "fromEnv",
+			},
+			want: &config{
+				Number:    3,
+				String:    "fromEnv",
+				NoDefault: "",
+				NoEnv:     "default",
+			},
+			wantErr: false,
+		},
+		{
+			name: "parsing error fallback to env",
+			file: "-",
+			ext:  "json",
+			env: map[string]string{
+				"TEST_NUMBER": "3",
+				"TEST_STRING": "fromEnv",
+			},
+			want: &config{
+				Number:    3,
+				String:    "fromEnv",
+				NoDefault: "",
+				NoEnv:     "default",
+			},
+			wantErr: false,
+		},
+		{
+			name: "file and env parse error",
+			file: "-",
+			ext:  "json",
+			env: map[string]string{
+				"TEST_NUMBER": "five hundred",
+				"TEST_STRING": "fromEnv",
+			},
 			want:    nil,
 			wantErr: true,
 		},
-
 		{
-			name:    "parsing error",
-			file:    "-",
-			ext:     "json",
-			want:    nil,
-			wantErr: true,
+			name: "parsed file and failed to parse env",
+			file: `
+number: 2
+string: test
+no-default: NoDefault
+`,
+			ext: "yaml",
+			env: map[string]string{
+				"TEST_NUMBER": "five hundred",
+				"TEST_STRING": "fromEnv",
+			},
+			want: &config{
+				Number:    2,
+				String:    "test",
+				NoDefault: "NoDefault",
+				NoEnv:     "default",
+			},
+			wantErr: false,
 		},
 	}
 
@@ -1159,6 +1207,51 @@ no-env: this
 			}
 			if err == nil && !reflect.DeepEqual(&cfg, tt.want) {
 				t.Errorf("wrong data %v, want %v", &cfg, tt.want)
+			}
+		})
+	}
+}
+
+func TestReadDefaults(t *testing.T) {
+	type goodMetadataConfig struct {
+		Number    int64  `env-default:"1"`
+		String    string `env-default:"default"`
+		NoDefault string
+	}
+	type badMetadataConfig struct {
+		Number int64 `env-default:"one"`
+	}
+
+	tests := []struct {
+		name    string
+		want    interface{}
+		cfg     interface{}
+		wantErr bool
+	}{
+		{
+			name: "successfully reads default values",
+			want: &goodMetadataConfig{
+				Number:    1,
+				String:    "default",
+				NoDefault: "",
+			},
+			cfg:     &goodMetadataConfig{},
+			wantErr: false,
+		},
+		{
+			name:    "fails to read default values due to bad type",
+			want:    nil,
+			cfg:     &badMetadataConfig{},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := readDefaults(tt.cfg); (err != nil) != tt.wantErr {
+				t.Errorf("wrong error behavior %v, wantErr %v", err, tt.wantErr)
+			} else if err == nil && !reflect.DeepEqual(tt.cfg, tt.want) {
+				t.Errorf("wrong data %v, want %v", tt.cfg, tt.want)
 			}
 		})
 	}
