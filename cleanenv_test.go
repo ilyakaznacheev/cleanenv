@@ -50,13 +50,15 @@ func TestReadEnvVars(t *testing.T) {
 	}
 
 	type AllTypes struct {
-		Integer         int64             `env:"TEST_INTEGER"`
-		UnsInteger      uint64            `env:"TEST_UNSINTEGER"`
-		Float           float64           `env:"TEST_FLOAT"`
-		Boolean         bool              `env:"TEST_BOOLEAN"`
-		String          string            `env:"TEST_STRING"`
-		Duration        time.Duration     `env:"TEST_DURATION"`
-		Time            time.Time         `env:"TEST_TIME"`
+		Integer    int64         `env:"TEST_INTEGER"`
+		UnsInteger uint64        `env:"TEST_UNSINTEGER"`
+		Float      float64       `env:"TEST_FLOAT"`
+		Boolean    bool          `env:"TEST_BOOLEAN"`
+		String     string        `env:"TEST_STRING"`
+		Duration   time.Duration `env:"TEST_DURATION"`
+		Time       time.Time     `env:"TEST_TIME"`
+		// Location depends on the system, so we test it with time.UTC
+		Location        *time.Location    `env:"TEST_LOCATION"`
 		ArrayInt        []int             `env:"TEST_ARRAYINT"`
 		ArrayString     []string          `env:"TEST_ARRAYSTRING"`
 		MapStringInt    map[string]int    `env:"TEST_MAPSTRINGINT"`
@@ -104,13 +106,15 @@ func TestReadEnvVars(t *testing.T) {
 		{
 			name: "all types",
 			env: map[string]string{
-				"TEST_INTEGER":         "-5",
-				"TEST_UNSINTEGER":      "5",
-				"TEST_FLOAT":           "5.5",
-				"TEST_BOOLEAN":         "true",
-				"TEST_STRING":          "test",
-				"TEST_DURATION":        "1h5m10s",
-				"TEST_TIME":            "2012-04-23T18:25:43.511Z",
+				"TEST_INTEGER":    "-5",
+				"TEST_UNSINTEGER": "5",
+				"TEST_FLOAT":      "5.5",
+				"TEST_BOOLEAN":    "true",
+				"TEST_STRING":     "test",
+				"TEST_DURATION":   "1h5m10s",
+				"TEST_TIME":       "2012-04-23T18:25:43.511Z",
+				// Location depends on the system, so we test it with time.UTC
+				"TEST_LOCATION":        "UTC",
 				"TEST_ARRAYINT":        "1,2,3",
 				"TEST_ARRAYSTRING":     "a,b,c",
 				"TEST_MAPSTRINGINT":    "a:1,b:2,c:3",
@@ -125,6 +129,7 @@ func TestReadEnvVars(t *testing.T) {
 				String:      "test",
 				Duration:    durationFunc("1h5m10s"),
 				Time:        timeFunc("2012-04-23T18:25:43.511Z", time.RFC3339),
+				Location:    time.UTC,
 				ArrayInt:    []int{1, 2, 3},
 				ArrayString: []string{"a", "b", "c"},
 				MapStringInt: map[string]int{
@@ -373,7 +378,7 @@ func TestReadEnvVarsURL(t *testing.T) {
 			}
 			if !reflect.DeepEqual(tt.cfg, tt.want) {
 				fmt.Println(tt.cfg.(*WithURL).DatabaseURL)
-				t.Errorf("wrong data %v, want %v", tt.cfg, tt.want)
+				t.Errorf("wrong data: got %v, want %v", tt.cfg, tt.want)
 			}
 		})
 	}
@@ -428,7 +433,6 @@ func TestReadEnvVarsTime(t *testing.T) {
 		})
 	}
 }
-
 func TestReadEnvVarsWithPrefix(t *testing.T) {
 	type Logging struct {
 		Debug bool `env:"DEBUG"`
@@ -630,9 +634,7 @@ number = 1
 float = 2.3
 string = "test"
 boolean = true
-
 array = [1, 2, 3]
-
 [object]
 one = 1
 two = 2`,
@@ -1161,5 +1163,27 @@ no-env: this
 				t.Errorf("wrong data %v, want %v", &cfg, tt.want)
 			}
 		})
+	}
+}
+
+// TestTimeLocation tests *time.Location parse. It is  a pointer type,
+// so we need to compare it with pointer manually,
+// because reflect.DeepEqual() compares only pointer values, not their structs
+func TestTimeLocation(t *testing.T) {
+	want := time.UTC
+
+	var S struct {
+		Location *time.Location `env:"TEST_LOCATION"`
+	}
+
+	os.Setenv("TEST_LOCATION", "UTC")
+	defer os.Clearenv()
+
+	if err := ReadEnv(&S); err != nil {
+		t.Fatal("cannot read env:", err)
+	}
+
+	if want != S.Location {
+		t.Errorf("wrong location pointers: got %p, want %p", S.Location, want)
 	}
 }
