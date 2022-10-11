@@ -433,7 +433,6 @@ func TestReadEnvVarsTime(t *testing.T) {
 		})
 	}
 }
-
 func TestReadEnvVarsWithPrefix(t *testing.T) {
 	type Logging struct {
 		Debug bool `env:"DEBUG"`
@@ -570,12 +569,12 @@ func TestParseFile(t *testing.T) {
 		Two int `yaml:"two" json:"two" toml:"two"`
 	}
 	type config struct {
-		Number  int64        `yaml:"number"  json:"number"  toml:"number"`
-		Float   float64      `yaml:"float"   json:"float"   toml:"float"`
-		String  string       `yaml:"string"  json:"string"  toml:"string"`
+		Number  int64        `yaml:"number" json:"number" toml:"number"`
+		Float   float64      `yaml:"float" json:"float" toml:"float"`
+		String  string       `yaml:"string" json:"string" toml:"string"`
 		Boolean bool         `yaml:"boolean" json:"boolean" toml:"boolean"`
-		Object  configObject `yaml:"object"  json:"object"  toml:"object"`
-		Array   []int        `yaml:"array"   json:"array"   toml:"array"`
+		Object  configObject `yaml:"object" json:"object" toml:"object"`
+		Array   []int        `yaml:"array" json:"array" toml:"array"`
 	}
 
 	wantConfig := config{
@@ -635,9 +634,7 @@ number = 1
 float = 2.3
 string = "test"
 boolean = true
-
 array = [1, 2, 3]
-
 [object]
 one = 1
 two = 2`,
@@ -772,8 +769,8 @@ func TestParseFileEnv(t *testing.T) {
 
 func TestGetDescription(t *testing.T) {
 	type testSingleEnv struct {
-		One   int `env:"ONE"   env-description:"one"`
-		Two   int `env:"TWO"   env-description:"two"`
+		One   int `env:"ONE" env-description:"one"`
+		Two   int `env:"TWO" env-description:"two"`
 		Three int `env:"THREE" env-description:"three"`
 	}
 
@@ -783,8 +780,8 @@ func TestGetDescription(t *testing.T) {
 	}
 
 	type testDefaultEnv struct {
-		One   int `env:"ONE"   env-description:"one"   env-default:"1"`
-		Two   int `env:"TWO"   env-description:"two"   env-default:"2"`
+		One   int `env:"ONE" env-description:"one" env-default:"1"`
+		Two   int `env:"TWO" env-description:"two" env-default:"2"`
 		Three int `env:"THREE" env-description:"three" env-default:"3"`
 	}
 
@@ -904,8 +901,8 @@ func TestGetDescription(t *testing.T) {
 
 func TestFUsage(t *testing.T) {
 	type testSingleEnv struct {
-		One   int `env:"ONE"   env-description:"one"`
-		Two   int `env:"TWO"   env-description:"two"`
+		One   int `env:"ONE" env-description:"one"`
+		Two   int `env:"TWO" env-description:"two"`
 		Three int `env:"THREE" env-description:"three"`
 	}
 
@@ -992,10 +989,10 @@ func TestFUsage(t *testing.T) {
 
 func TestReadConfig(t *testing.T) {
 	type config struct {
-		Number    int64  `edn:"number"     yaml:"number"     env:"TEST_NUMBER"     env-default:"1"`
-		String    string `edn:"string"     yaml:"string"     env:"TEST_STRING"     env-default:"default"`
+		Number    int64  `edn:"number" yaml:"number" env:"TEST_NUMBER" env-default:"1"`
+		String    string `edn:"string" yaml:"string" env:"TEST_STRING" env-default:"default"`
 		NoDefault string `edn:"no-default" yaml:"no-default" env:"TEST_NO_DEFAULT"`
-		NoEnv     string `edn:"no-env"     yaml:"no-env"     env-default:"default"`
+		NoEnv     string `edn:"no-env" yaml:"no-env" env-default:"default"`
 	}
 
 	tests := []struct {
