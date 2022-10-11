@@ -1,0 +1,40 @@
+name: test
+
+on:
+  push:
+    branches:
+      - 'master'
+      - 'develop'
+    tags:
+      - 'v*.*.*'
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        go-version:
+          - '1.19'
+          - '1.18'
+          - '1.17'
+          - '1.16'
+          - '1.15'
+          - '1.14'
+          - '1.13'
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+    env:
+      GO111MODULE: 'on'
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ matrix.go-version }}
+      - name: Install dependencies
+        run: go get .
+      - name: Test with the Go CLI
+        run: go test ./...

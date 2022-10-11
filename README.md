@@ -295,6 +295,12 @@ This code will try to read and parse the configuration file `config.yml` as the 
 
 For more details check the [example](/example) directory.
 
+## Version Support Policy
+
+We support the last 7 versions of Golang. E.g. if the current version is 1.19, we test compatibility with all versions from 1.19 to 1.13.
+
+If you use an older version of Golang in your project, please use an older library version.
+
 ## Contribution
 
 The tool is open-sourced under the [MIT](LICENSE) license.
