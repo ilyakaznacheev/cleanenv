@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"testing"
 
 	"github.com/ilyakaznacheev/cleanenv"
 )
@@ -271,22 +270,4 @@ func ExampleUsage() {
 	//     	second parameter
 	//   THREE string
 	//     	third parameter
-}
-
-func ExampleUnexportedField(t *testing.T) {
-	conf := struct {
-		Database struct {
-			Host        string `yaml:"host" env:"DB_HOST" env-description:"Database host"`
-			Port        string `yaml:"port" env:"DB_PORT" env-description:"Database port"`
-		} `yaml:"database"`
-		server struct {
-			Host string `yaml:"host" env:"SRV_HOST,HOST" env-description:"Server host" env-default:"localhost"`
-			Port string `yaml:"port" env:"SRV_PORT,PORT" env-description:"Server port" env-default:"8080"`
-		} `yaml:"server"`
-	}{}
-
-	if err := cleanenv.ReadConfig("example/simple_config/config.yml", &conf); err != nil {
-		t.Fatal(err)
-	}
-	t.Logf("%+v", conf)
 }
