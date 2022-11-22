@@ -1187,3 +1187,26 @@ func TestTimeLocation(t *testing.T) {
 		t.Errorf("wrong location pointers: got %p, want %p", S.Location, want)
 	}
 }
+
+func TestSkipUnexportedField(t *testing.T) {
+	conf := struct {
+		Database struct {
+			Host        string `yaml:"host" env:"DB_HOST" env-description:"Database host"`
+			Port        string `yaml:"port" env:"DB_PORT" env-description:"Database port"`
+		} `yaml:"database"`
+		server struct {
+			Host string `yaml:"host" env:"SRV_HOST,HOST" env-description:"Server host" env-default:"localhost"`
+			Port string `yaml:"port" env:"SRV_PORT,PORT" env-description:"Server port" env-default:"8080"`
+		} `yaml:"server"`
+	}{}
+
+	if err := ReadConfig("example/simple_config/config.yml", &conf); err != nil {
+		t.Fatal(err)
+	}
+	if conf.server.Host != "" || conf.server.Port != "" {
+		t.Fatal("unexpect value on unexported fields")
+	}
+	if conf.Database.Host == "" || conf.Database.Port == "" {
+		t.Fatal("expect value on exported fields")
+	}
+}

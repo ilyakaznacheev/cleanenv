@@ -333,7 +333,10 @@ func readStructMetadata(cfgRoot interface{}) ([]structMeta, error) {
 
 			// process nested structure (except of supported ones)
 			if fld := s.Field(idx); fld.Kind() == reflect.Struct {
-
+				//skip unexported
+				if !fld.CanInterface() {
+					continue
+				}
 				// add structure to parsing stack
 				if _, found := validStructs[fld.Type()]; !found {
 					prefix, _ := fType.Tag.Lookup(TagEnvPrefix)
