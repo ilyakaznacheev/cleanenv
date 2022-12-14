@@ -444,7 +444,7 @@ func readEnvVars(cfg interface{}, update bool) error {
 		}
 
 		if err := parseValue(meta.fieldValue, *rawValue, meta.separator, meta.layout); err != nil {
-			return fmt.Errorf("field %v env %v: %v", meta.fieldName, envName, err)
+			return fmt.Errorf("parsing field %v env %v: %v", meta.fieldName, envName, err)
 		}
 	}
 
