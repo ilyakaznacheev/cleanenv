@@ -441,8 +441,13 @@ func readEnvVars(cfg interface{}, update bool) error {
 			continue
 		}
 
+		var envName string
+		if len(meta.envList) > 0 {
+			envName = meta.envList[0]
+		}
+
 		if err := parseValue(meta.fieldValue, *rawValue, meta.separator, meta.layout); err != nil {
-			return err
+			return fmt.Errorf("parsing field %v env %v: %v", meta.fieldName, envName, err)
 		}
 	}
 
