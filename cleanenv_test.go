@@ -1191,8 +1191,8 @@ func TestTimeLocation(t *testing.T) {
 func TestSkipUnexportedField(t *testing.T) {
 	conf := struct {
 		Database struct {
-			Host        string `yaml:"host" env:"DB_HOST" env-description:"Database host"`
-			Port        string `yaml:"port" env:"DB_PORT" env-description:"Database port"`
+			Host string `yaml:"host" env:"DB_HOST" env-description:"Database host"`
+			Port string `yaml:"port" env:"DB_PORT" env-description:"Database port"`
 		} `yaml:"database"`
 		server struct {
 			Host string `yaml:"host" env:"SRV_HOST,HOST" env-description:"Server host" env-default:"localhost"`
@@ -1209,4 +1209,60 @@ func TestSkipUnexportedField(t *testing.T) {
 	if conf.Database.Host == "" || conf.Database.Port == "" {
 		t.Fatal("expect value on exported fields")
 	}
+}
+
+func TestReadConfig_NestedStructInMap(t *testing.T) {
+	tmpFile, err := os.CreateTemp(t.TempDir(), "*.yaml")
+	if err != nil {
+		t.Fatal("create temp file:", err)
+	}
+
+	text := []byte(`
+children: 
+  first:
+    number: 1`)
+	if _, err = tmpFile.Write(text); err != nil {
+		t.Fatal("write to temp file:", err)
+	}
+
+	t.Run("nested pointer to struct", func(t *testing.T) {
+		type (
+			Child struct {
+				Number        int64 `yaml:"number"`
+				DefaultNumber int64 `yaml:"default_number" env-default:"10"`
+			}
+			Parent struct {
+				Children map[string]*Child `yaml:"children"`
+			}
+		)
+		expectedConfig := Parent{
+			Children: map[string]*Child{"first": {Number: 1, DefaultNumber: 10}},
+		}
+
+		var p Parent
+		if err = ReadConfig(tmpFile.Name(), &p); err != nil {
+			t.Fatal("read config:", err)
+		}
+		if err == nil && !reflect.DeepEqual(p, expectedConfig) {
+			t.Errorf("wrong data: %+v, want: %+v", p, expectedConfig)
+		}
+
+	})
+
+	t.Run("nested struct", func(t *testing.T) {
+		type (
+			Child struct {
+				Number        int64 `yaml:"number"`
+				DefaultNumber int64 `yaml:"default_number" env-default:"10"`
+			}
+			Parent struct {
+				Children map[string]Child `yaml:"children"`
+			}
+		)
+
+		var p Parent
+		if err = ReadConfig(tmpFile.Name(), &p); err == nil {
+			t.Error("expected error, got nil")
+		}
+	})
 }
