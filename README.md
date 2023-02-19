@@ -305,7 +305,9 @@ If you use an older version of Golang in your project, please use an older libra
 
 The tool is open-sourced under the [MIT](LICENSE) license.
 
-If you will find some error, want to add something or ask a question - feel free to create an issue and/or make a pull request.
+If you find some error, want to add something or ask a question - feel free to create an issue and/or make a pull request.
+
+Guidelines for contribution may be found in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Any contribution is welcome.
 
