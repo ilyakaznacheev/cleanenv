@@ -331,6 +331,40 @@ func readStructMetadata(cfgRoot interface{}) ([]structMeta, error) {
 				separator string
 			)
 
+			// process structs in map (except of supported ones)
+			if fld := s.Field(idx); fld.Kind() == reflect.Map && validStructs[fld.Type().Elem()] == nil {
+				mapElem := fld.Type().Elem()
+
+				if mapElem.Kind() == reflect.Struct {
+					// I don't see a way to support structures in maps at the moment.
+					// Perhaps this requires a major change in library logic.
+					return nil, fmt.Errorf("struct in map value is not supported, use pointer to struct instead")
+				}
+
+				isPointerToStruct := mapElem.Kind() == reflect.Ptr && mapElem.Elem().Kind() == reflect.Struct
+				if isPointerToStruct {
+					// Map values are not addressable, and we can't pass them to cfgNode.
+					// So we need to create a new map with new struct values.
+					newMap := reflect.MakeMap(fld.Type())
+					for _, key := range fld.MapKeys() {
+						value := fld.MapIndex(key)
+						// unwrap pointer
+						if value.Kind() == reflect.Ptr {
+							value = value.Elem()
+						}
+
+						newStruct := reflect.New(value.Type()).Elem()
+						newStruct.Set(value)
+						newMap.SetMapIndex(key, newStruct.Addr())
+
+						prefix, _ := fType.Tag.Lookup(TagEnvPrefix)
+						cfgStack = append(cfgStack, cfgNode{newStruct.Addr().Interface(), sPrefix + prefix})
+					}
+					// replace old map with new one
+					fld.Set(newMap)
+				}
+			}
+
 			// process nested structure (except of supported ones)
 			if fld := s.Field(idx); fld.Kind() == reflect.Struct {
 				//skip unexported
