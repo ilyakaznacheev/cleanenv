@@ -547,6 +547,12 @@ func parseValue(field reflect.Value, value, sep string, layout *string) error {
 			return structParser(&field, value, layout)
 		}
 
+		// Handle pointer types.
+		if valueType.Kind() == reflect.Ptr {
+			field.Set(reflect.New(valueType.Elem()))
+			return parseValue(field.Elem(), value, sep, layout)
+		}
+
 		return fmt.Errorf("unsupported type %s.%s", valueType.PkgPath(), valueType.Name())
 	}
 
