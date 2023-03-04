@@ -398,6 +398,50 @@ func readStructMetadata(cfgRoot interface{}) ([]structMeta, error) {
 	return metas, nil
 }
 
+type readEnvVarsError struct {
+	missingEnvs []string
+	parsingErrs []error
+}
+
+func (e readEnvVarsError) IsEmpty() bool {
+	return len(e.missingEnvs) == 0 && len(e.parsingErrs) == 0
+}
+
+func (e readEnvVarsError) Error() string {
+	var tmp string
+	for i, env := range e.missingEnvs {
+		tmp += fmt.Sprintf("\t%q", env)
+		// add new line if this is not the last element
+		if i != len(e.missingEnvs)-1 {
+			tmp += "\n"
+		}
+	}
+	missings := fmt.Sprintf("missing required environment variables: \n%s", tmp)
+
+	tmp = ""
+	for i, err := range e.parsingErrs {
+		tmp += fmt.Sprintf("\t%v", err)
+		// add new line if this is not the last element
+		if i != len(e.parsingErrs)-1 {
+			tmp += "\n"
+		}
+	}
+	parsingErrs := fmt.Sprintf("parsing errors for enviorment variables: \n%s", tmp)
+
+	var res string
+
+	switch {
+	case len(e.missingEnvs) != 0 && len(e.parsingErrs) != 0:
+		res = fmt.Sprintf("%s\n%s", missings, parsingErrs)
+	case len(e.missingEnvs) != 0:
+		res = missings
+	case len(e.parsingErrs) != 0:
+		res = parsingErrs
+	}
+
+	return res
+}
+
 // readEnvVars reads environment variables to the provided configuration structure
 func readEnvVars(cfg interface{}, update bool) error {
 	metaInfo, err := readStructMetadata(cfg)
@@ -411,15 +455,20 @@ func readEnvVars(cfg interface{}, update bool) error {
 		}
 	}
 
+	var errs readEnvVarsError
+
 	for _, meta := range metaInfo {
 		// update only updatable fields
 		if update && !meta.updatable {
 			continue
 		}
 
-		var rawValue *string
+		var (
+			rawValue *string
+			env      string
+		)
 
-		for _, env := range meta.envList {
+		for _, env = range meta.envList {
 			if value, ok := os.LookupEnv(env); ok {
 				rawValue = &value
 				break
@@ -427,10 +476,8 @@ func readEnvVars(cfg interface{}, update bool) error {
 		}
 
 		if rawValue == nil && meta.required && meta.isFieldValueZero() {
-			return fmt.Errorf(
-				"field %q is required but the value is not provided",
-				meta.fieldName,
-			)
+			errs.missingEnvs = append(errs.missingEnvs, env)
+			continue
 		}
 
 		if rawValue == nil && meta.isFieldValueZero() {
@@ -447,8 +494,12 @@ func readEnvVars(cfg interface{}, update bool) error {
 		}
 
 		if err := parseValue(meta.fieldValue, *rawValue, meta.separator, meta.layout); err != nil {
-			return fmt.Errorf("parsing field %v env %v: %v", meta.fieldName, envName, err)
+			errs.parsingErrs = append(errs.parsingErrs, fmt.Errorf("field %v env %q: %v", meta.fieldName, envName, err))
 		}
+	}
+
+	if !errs.IsEmpty() {
+		return errs
 	}
 
 	return nil
