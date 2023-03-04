@@ -1191,8 +1191,8 @@ func TestTimeLocation(t *testing.T) {
 func TestSkipUnexportedField(t *testing.T) {
 	conf := struct {
 		Database struct {
-			Host        string `yaml:"host" env:"DB_HOST" env-description:"Database host"`
-			Port        string `yaml:"port" env:"DB_PORT" env-description:"Database port"`
+			Host string `yaml:"host" env:"DB_HOST" env-description:"Database host"`
+			Port string `yaml:"port" env:"DB_PORT" env-description:"Database port"`
 		} `yaml:"database"`
 		server struct {
 			Host string `yaml:"host" env:"SRV_HOST,HOST" env-description:"Server host" env-default:"localhost"`
@@ -1208,5 +1208,45 @@ func TestSkipUnexportedField(t *testing.T) {
 	}
 	if conf.Database.Host == "" || conf.Database.Port == "" {
 		t.Fatal("expect value on exported fields")
+	}
+}
+
+func TestReturnMissingVariables(t *testing.T) {
+	conf := struct {
+		Port         string        `env:"PORT" env-required:"true"`
+		JWTsalt      string        `env:"JWT_SALT" env-required:"true"`
+		ReadTimout   time.Duration `env:"READ_TIMEOUT" env-required:"true"`
+		WriteTimeout time.Duration `env:"WRITE_TIMEOUT" env-default:"15s"`
+	}{}
+	expectedErrMsg := `missing required environment variables: 
+	"PORT"
+	"JWT_SALT"
+	"READ_TIMEOUT"
+parsing errors for enviorment variables: 
+	field WriteTimeout env "WRITE_TIMEOUT": time: invalid duration "incorrect"`
+
+	os.Setenv("WRITE_TIMEOUT", "incorrect")
+	defer os.Clearenv()
+
+	err := ReadEnv(&conf)
+
+	if err == nil {
+		t.Fatal("expect error")
+	}
+
+	switch errt := err.(type) {
+	case readEnvVarsError:
+		t.Log(errt.Error())
+		if len(errt.missingEnvs) != 3 {
+			t.Fatalf("wrong number of missing envs: got %v want %v", len(errt.missingEnvs), 4)
+		}
+		if len(errt.parsingErrs) != 1 {
+			t.Fatalf("wrong number of parsing errors: got %v want %v", len(errt.parsingErrs), 1)
+		}
+		if errt.Error() != expectedErrMsg {
+			t.Fatalf("wrong error message: got %v want %v", errt.Error(), expectedErrMsg)
+		}
+	default:
+		t.Fatal("expect type of error to be readEnvVarsError")
 	}
 }
