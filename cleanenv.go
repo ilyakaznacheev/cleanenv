@@ -426,7 +426,7 @@ func (e readEnvVarsError) Error() string {
 			tmp += "\n"
 		}
 	}
-	parsingErrs := fmt.Sprintf("parsing errors for enviorment variables: \n%s", tmp)
+	parsingErrs := fmt.Sprintf("parsing errors for environment variables: \n%s", tmp)
 
 	var res string
 
