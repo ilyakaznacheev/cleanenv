@@ -449,6 +449,9 @@ func readEnvVars(cfg interface{}, update bool) error {
 		return err
 	}
 
+	// store initial configuration, so we can return default values if errors occur
+	initialCfg := reflect.ValueOf(cfg).Elem().Interface()
+
 	if updater, ok := cfg.(Updater); ok {
 		if err := updater.Update(); err != nil {
 			return err
@@ -499,6 +502,8 @@ func readEnvVars(cfg interface{}, update bool) error {
 	}
 
 	if !errs.IsEmpty() {
+		// restore initial configuration
+		reflect.ValueOf(cfg).Elem().Set(reflect.ValueOf(initialCfg))
 		return errs
 	}
 
