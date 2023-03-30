@@ -1,6 +1,7 @@
 package cleanenv
 
 import (
+	"encoding"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -545,6 +546,14 @@ func parseValue(field reflect.Value, value, sep string, layout *string) error {
 		// look for supported struct parser
 		if structParser, found := validStructs[valueType]; found {
 			return structParser(&field, value, layout)
+		}
+
+		if field.CanInterface() {
+			if cs, ok := field.Interface().(encoding.TextUnmarshaler); ok {
+				return cs.UnmarshalText([]byte(value))
+			} else if csp, ok := field.Addr().Interface().(encoding.TextUnmarshaler); ok {
+				return csp.UnmarshalText([]byte(value))
+			}
 		}
 
 		return fmt.Errorf("unsupported type %s.%s", valueType.PkgPath(), valueType.Name())
