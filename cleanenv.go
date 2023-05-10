@@ -135,11 +135,11 @@ func parseFile(path string, cfg interface{}) error {
 	// parse the file depending on the file type
 	switch ext := strings.ToLower(filepath.Ext(path)); ext {
 	case ".yaml", ".yml":
-		err = parseYAML(f, cfg)
+		err = ParseYAML(f, cfg)
 	case ".json":
-		err = parseJSON(f, cfg)
+		err = ParseJSON(f, cfg)
 	case ".toml":
-		err = parseTOML(f, cfg)
+		err = ParseTOML(f, cfg)
 	case ".edn":
 		err = parseEDN(f, cfg)
 	case ".env":
@@ -154,17 +154,17 @@ func parseFile(path string, cfg interface{}) error {
 }
 
 // parseYAML parses YAML from reader to data structure
-func parseYAML(r io.Reader, str interface{}) error {
+func ParseYAML(r io.Reader, str interface{}) error {
 	return yaml.NewDecoder(r).Decode(str)
 }
 
 // parseJSON parses JSON from reader to data structure
-func parseJSON(r io.Reader, str interface{}) error {
+func ParseJSON(r io.Reader, str interface{}) error {
 	return json.NewDecoder(r).Decode(str)
 }
 
 // parseTOML parses TOML from reader to data structure
-func parseTOML(r io.Reader, str interface{}) error {
+func ParseTOML(r io.Reader, str interface{}) error {
 	_, err := toml.NewDecoder(r).Decode(str)
 	return err
 }
