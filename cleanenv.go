@@ -1,6 +1,7 @@
 package cleanenv
 
 import (
+	"encoding"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -460,6 +461,12 @@ func parseValue(field reflect.Value, value, sep string, layout *string) error {
 	// TODO: simplify recursion
 
 	if field.CanInterface() {
+		if ct, ok := field.Addr().Interface().(encoding.TextUnmarshaler); ok {
+			return ct.UnmarshalText([]byte(value))
+		} else if ctp, ok := field.Interface().(encoding.TextUnmarshaler); ok {
+			return ctp.UnmarshalText([]byte(value))
+		}
+
 		if cs, ok := field.Interface().(Setter); ok {
 			return cs.SetValue(value)
 		} else if csp, ok := field.Addr().Interface().(Setter); ok {
