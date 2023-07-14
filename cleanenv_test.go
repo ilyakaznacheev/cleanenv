@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/url"
 	"os"
@@ -1191,8 +1192,8 @@ func TestTimeLocation(t *testing.T) {
 func TestSkipUnexportedField(t *testing.T) {
 	conf := struct {
 		Database struct {
-			Host        string `yaml:"host" env:"DB_HOST" env-description:"Database host"`
-			Port        string `yaml:"port" env:"DB_PORT" env-description:"Database port"`
+			Host string `yaml:"host" env:"DB_HOST" env-description:"Database host"`
+			Port string `yaml:"port" env:"DB_PORT" env-description:"Database port"`
 		} `yaml:"database"`
 		server struct {
 			Host string `yaml:"host" env:"SRV_HOST,HOST" env-description:"Server host" env-default:"localhost"`
@@ -1208,5 +1209,182 @@ func TestSkipUnexportedField(t *testing.T) {
 	}
 	if conf.Database.Host == "" || conf.Database.Port == "" {
 		t.Fatal("expect value on exported fields")
+	}
+}
+
+func TestParseYAML(t *testing.T) {
+	type configObject struct {
+		One int `yaml:"one"`
+		Two int `yaml:"two"`
+	}
+	type config struct {
+		Number  int64        `yaml:"number"`
+		Float   float64      `yaml:"float"`
+		String  string       `yaml:"string"`
+		Boolean bool         `yaml:"boolean"`
+		Object  configObject `yaml:"object"`
+		Array   []int        `yaml:"array"`
+	}
+
+	wantConfig := config{
+		Number:  1,
+		Float:   2.3,
+		String:  "test",
+		Boolean: true,
+		Object:  configObject{1, 2},
+		Array:   []int{1, 2, 3},
+	}
+
+	tests := []struct {
+		name    string
+		r       io.Reader
+		want    *config
+		wantErr bool
+	}{
+		{
+			name: "yaml",
+			r: bytes.NewBufferString(`
+number: 1
+float: 2.3
+string: test
+boolean: yes
+object:
+  one: 1
+  two: 2
+array: [1, 2, 3]`),
+			want:    &wantConfig,
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var cfg config
+			var err error
+			if err = ParseYAML(tt.r, &cfg); (err != nil) != tt.wantErr {
+				t.Errorf("ParseYAML() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if err == nil && !reflect.DeepEqual(&cfg, tt.want) {
+				t.Errorf("wrong data %v, want %v", &cfg, tt.want)
+			}
+		})
+	}
+}
+
+func TestParseJSON(t *testing.T) {
+	type configObject struct {
+		One int `json:"one"`
+		Two int `json:"two"`
+	}
+	type config struct {
+		Number  int64        `json:"number"`
+		Float   float64      `json:"float"`
+		String  string       `json:"string"`
+		Boolean bool         `json:"boolean"`
+		Object  configObject `json:"object"`
+		Array   []int        `json:"array"`
+	}
+
+	wantConfig := config{
+		Number:  1,
+		Float:   2.3,
+		String:  "test",
+		Boolean: true,
+		Object:  configObject{1, 2},
+		Array:   []int{1, 2, 3},
+	}
+
+	tests := []struct {
+		name    string
+		r       io.Reader
+		want    *config
+		wantErr bool
+	}{
+		{
+			name: "json",
+			r: bytes.NewBufferString(`
+{
+	"number": 1,
+	"float": 2.3,
+	"string": "test",
+	"boolean": true,
+	"object": {
+		"one": 1,
+		"two": 2
+	},
+	"array": [1, 2, 3]
+}`),
+			want:    &wantConfig,
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var cfg config
+			var err error
+			if err := ParseJSON(tt.r, &cfg); (err != nil) != tt.wantErr {
+				t.Errorf("ParseJSON() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if err == nil && !reflect.DeepEqual(&cfg, tt.want) {
+				t.Errorf("wrong data %v, want %v", &cfg, tt.want)
+			}
+		})
+	}
+}
+
+func TestParseTOML(t *testing.T) {
+	type configObject struct {
+		One int `toml:"one"`
+		Two int `toml:"two"`
+	}
+	type config struct {
+		Number  int64        `toml:"number"`
+		Float   float64      `toml:"float"`
+		String  string       `toml:"string"`
+		Boolean bool         `toml:"boolean"`
+		Object  configObject `toml:"object"`
+		Array   []int        `toml:"array"`
+	}
+
+	wantConfig := config{
+		Number:  1,
+		Float:   2.3,
+		String:  "test",
+		Boolean: true,
+		Object:  configObject{1, 2},
+		Array:   []int{1, 2, 3},
+	}
+
+	tests := []struct {
+		name    string
+		r       io.Reader
+		want    *config
+		wantErr bool
+	}{
+		{
+			name: "toml",
+			r: bytes.NewBufferString(`
+number = 1
+float = 2.3
+string = "test"
+boolean = true
+array = [1, 2, 3]
+[object]
+one = 1
+two = 2`),
+			want:    &wantConfig,
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var cfg config
+			var err error
+			if err := ParseTOML(tt.r, &cfg); (err != nil) != tt.wantErr {
+				t.Errorf("ParseTOML() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if err == nil && !reflect.DeepEqual(&cfg, tt.want) {
+				t.Errorf("wrong data %v, want %v", &cfg, tt.want)
+			}
+		})
 	}
 }
