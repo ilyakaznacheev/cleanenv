@@ -153,17 +153,17 @@ func parseFile(path string, cfg interface{}) error {
 	return nil
 }
 
-// parseYAML parses YAML from reader to data structure
+// ParseYAML parses YAML from reader to data structure
 func ParseYAML(r io.Reader, str interface{}) error {
 	return yaml.NewDecoder(r).Decode(str)
 }
 
-// parseJSON parses JSON from reader to data structure
+// ParseJSON parses JSON from reader to data structure
 func ParseJSON(r io.Reader, str interface{}) error {
 	return json.NewDecoder(r).Decode(str)
 }
 
-// parseTOML parses TOML from reader to data structure
+// ParseTOML parses TOML from reader to data structure
 func ParseTOML(r io.Reader, str interface{}) error {
 	_, err := toml.NewDecoder(r).Decode(str)
 	return err
