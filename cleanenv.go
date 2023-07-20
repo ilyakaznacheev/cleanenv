@@ -1,6 +1,7 @@
 package cleanenv
 
 import (
+	"encoding"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -459,7 +460,22 @@ func readEnvVars(cfg interface{}, update bool) error {
 func parseValue(field reflect.Value, value, sep string, layout *string) error {
 	// TODO: simplify recursion
 
+	valueType := field.Type()
+
+	// look for supported struct parser
+	// parsing of struct must be done before checking the implementation `encoding.TextUnmarshaler`
+	// standard struct types already have the implementation `encoding.TextUnmarshaler` (for example `time.Time`)
+	if structParser, found := validStructs[valueType]; found {
+		return structParser(&field, value, layout)
+	}
+
 	if field.CanInterface() {
+		if ct, ok := field.Interface().(encoding.TextUnmarshaler); ok {
+			return ct.UnmarshalText([]byte(value))
+		} else if ctp, ok := field.Addr().Interface().(encoding.TextUnmarshaler); ok {
+			return ctp.UnmarshalText([]byte(value))
+		}
+
 		if cs, ok := field.Interface().(Setter); ok {
 			return cs.SetValue(value)
 		} else if csp, ok := field.Addr().Interface().(Setter); ok {
@@ -467,7 +483,6 @@ func parseValue(field reflect.Value, value, sep string, layout *string) error {
 		}
 	}
 
-	valueType := field.Type()
 	switch valueType.Kind() {
 
 	// parse string value
@@ -542,11 +557,6 @@ func parseValue(field reflect.Value, value, sep string, layout *string) error {
 		field.Set(*mapValue)
 
 	default:
-		// look for supported struct parser
-		if structParser, found := validStructs[valueType]; found {
-			return structParser(&field, value, layout)
-		}
-
 		return fmt.Errorf("unsupported type %s.%s", valueType.PkgPath(), valueType.Name())
 	}
 
