@@ -468,10 +468,10 @@ func parseValue(field reflect.Value, value, sep string, layout *string) error {
 	}
 
 	if field.CanInterface() {
-		if ctp, ok := field.Addr().Interface().(encoding.TextUnmarshaler); ok {
-			return ctp.UnmarshalText([]byte(value))
-		} else if ct, ok := field.Interface().(encoding.TextUnmarshaler); ok {
+		if ct, ok := field.Interface().(encoding.TextUnmarshaler); ok {
 			return ct.UnmarshalText([]byte(value))
+		} else if ctp, ok := field.Addr().Interface().(encoding.TextUnmarshaler); ok {
+			return ctp.UnmarshalText([]byte(value))
 		}
 
 		if cs, ok := field.Interface().(Setter); ok {

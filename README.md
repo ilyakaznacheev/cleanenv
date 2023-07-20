@@ -4,7 +4,7 @@
 
 Minimalistic configuration reader
 
-[![Mentioned in Awesome Go](https://awesome.re/mentioned-badge.svg)](https://github.com/avelino/awesome-go) 
+[![Mentioned in Awesome Go](https://awesome.re/mentioned-badge.svg)](https://github.com/avelino/awesome-go)
 [![GoDoc](https://godoc.org/github.com/ilyakaznacheev/cleanenv?status.svg)](https://godoc.org/github.com/ilyakaznacheev/cleanenv)
 [![Go Report Card](https://goreportcard.com/badge/github.com/ilyakaznacheev/cleanenv)](https://goreportcard.com/report/github.com/ilyakaznacheev/cleanenv)
 [![Coverage Status](https://codecov.io/github/ilyakaznacheev/cleanenv/coverage.svg?branch=master)](https://codecov.io/gh/ilyakaznacheev/cleanenv)
@@ -24,18 +24,18 @@ This is a simple configuration reading tool. It just does the following:
 
 - [Installation](#installation)
 - [Usage](#usage)
-    - [Read Configuration](#read-configuration)
-    - [Read Environment Variables Only](#read-environment-variables-only)
-    - [Update Environment Variables](#update-environment-variables)
-    - [Description](#description)
+  - [Read Configuration](#read-configuration)
+  - [Read Environment Variables Only](#read-environment-variables-only)
+  - [Update Environment Variables](#update-environment-variables)
+  - [Description](#description)
 - [Model Format](#model-format)
 - [Supported types](#supported-types)
 - [Custom Functions](#custom-functions)
-    - [Custom Value Setter](#custom-value-setter)
-    - [Custom Value Update](#custom-value-update)
+  - [Custom Value Setter](#custom-value-setter)
+  - [Custom Value Update](#custom-value-update)
 - [Supported File Formats](#supported-file-formats)
 - [Integration](#integration)
-    - [Flag](#flag)
+  - [Flag](#flag)
 - [Examples](#examples)
 - [Contribution](#contribution)
 - [Thanks](#thanks)
@@ -93,7 +93,7 @@ This will do the following:
 
 Sometimes you don't want to use configuration files at all, or you may want to use `.env` file format instead. Thus, you can limit yourself with only reading environment variables:
 
-```go 
+```go
 import "github.com/ilyakaznacheev/cleanenv"
 
 type ConfigDatabase struct {
@@ -196,7 +196,6 @@ There are following supported types:
 - any type that implements `encoding.TextUnmarshaler`;
 - any type implementing `cleanenv.Setter` interface.
 
-
 ## Custom Functions
 
 To enhance package abilities you can use some custom functions.
@@ -252,6 +251,7 @@ There are several most popular config file formats supported:
 - ENV (`.env`)
 
 **Note**:
+
 - while using `.env` file the library will set corresponding data to process environment variables.
   It will override existing variables with the same keys in the process environment.
 
