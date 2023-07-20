@@ -463,6 +463,8 @@ func parseValue(field reflect.Value, value, sep string, layout *string) error {
 	valueType := field.Type()
 
 	// look for supported struct parser
+	// parsing of struct must be done before checking the implementation `encoding.TextUnmarshaler`
+	// standard struct types already have the implementation `encoding.TextUnmarshaler` (for example `time.Time`)
 	if structParser, found := validStructs[valueType]; found {
 		return structParser(&field, value, layout)
 	}
