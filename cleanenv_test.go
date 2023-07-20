@@ -820,8 +820,8 @@ func TestGetDescription(t *testing.T) {
 			header: nil,
 			want: "Environment variables:" +
 				"\n  ONE int\n    \tone" +
-				"\n  TWO int\n    \ttwo" +
-				"\n  THREE int\n    \tthree",
+				"\n  THREE int\n    \tthree" +
+				"\n  TWO int\n    \ttwo",
 			wantErr: false,
 		},
 
@@ -830,10 +830,10 @@ func TestGetDescription(t *testing.T) {
 			cfg:    &testSeveralEnv{},
 			header: nil,
 			want: "Environment variables:" +
-				"\n  ONE int\n    \tone" +
 				"\n  ENO int (alternative to ONE)\n    \tone" +
-				"\n  TWO int\n    \ttwo" +
-				"\n  OWT int (alternative to TWO)\n    \ttwo",
+				"\n  ONE int\n    \tone" +
+				"\n  OWT int (alternative to TWO)\n    \ttwo" +
+				"\n  TWO int\n    \ttwo",
 			wantErr: false,
 		},
 
@@ -843,8 +843,8 @@ func TestGetDescription(t *testing.T) {
 			header: nil,
 			want: "Environment variables:" +
 				"\n  ONE int\n    \tone (default \"1\")" +
-				"\n  TWO int\n    \ttwo (default \"2\")" +
-				"\n  THREE int\n    \tthree (default \"3\")",
+				"\n  THREE int\n    \tthree (default \"3\")" +
+				"\n  TWO int\n    \ttwo (default \"2\")",
 			wantErr: false,
 		},
 
@@ -872,8 +872,8 @@ func TestGetDescription(t *testing.T) {
 			header: &header,
 			want: "test header:" +
 				"\n  ONE int\n    \tone" +
-				"\n  TWO int\n    \ttwo" +
-				"\n  THREE int\n    \tthree",
+				"\n  THREE int\n    \tthree" +
+				"\n  TWO int\n    \ttwo",
 			wantErr: false,
 		},
 
@@ -921,8 +921,9 @@ func TestFUsage(t *testing.T) {
 			usageTexts: nil,
 			want: "Environment variables:" +
 				"\n  ONE int\n    \tone" +
+				"\n  THREE int\n    \tthree" +
 				"\n  TWO int\n    \ttwo" +
-				"\n  THREE int\n    \tthree\n",
+				"\n",
 		},
 
 		{
@@ -931,8 +932,9 @@ func TestFUsage(t *testing.T) {
 			usageTexts: nil,
 			want: "test header:" +
 				"\n  ONE int\n    \tone" +
+				"\n  THREE int\n    \tthree" +
 				"\n  TWO int\n    \ttwo" +
-				"\n  THREE int\n    \tthree\n",
+				"\n",
 		},
 
 		{
@@ -946,8 +948,9 @@ func TestFUsage(t *testing.T) {
 			want: "test1\ntest2\ntest3\n" +
 				"\nEnvironment variables:" +
 				"\n  ONE int\n    \tone" +
+				"\n  THREE int\n    \tthree" +
 				"\n  TWO int\n    \ttwo" +
-				"\n  THREE int\n    \tthree\n",
+				"\n",
 		},
 
 		{
@@ -961,8 +964,9 @@ func TestFUsage(t *testing.T) {
 			want: "test1\ntest2\ntest3\n" +
 				"\ntest header:" +
 				"\n  ONE int\n    \tone" +
+				"\n  THREE int\n    \tthree" +
 				"\n  TWO int\n    \ttwo" +
-				"\n  THREE int\n    \tthree\n",
+				"\n",
 		},
 	}
 	for _, tt := range tests {
@@ -977,6 +981,111 @@ func TestFUsage(t *testing.T) {
 				}(text))
 			}
 			var cfg testSingleEnv
+			FUsage(w, &cfg, tt.headerText, uFuncs...)()
+			gotRaw, _ := ioutil.ReadAll(w)
+			got := string(gotRaw)
+
+			if got != tt.want {
+				t.Errorf("wrong output %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestFUsageNested(t *testing.T) {
+	type testNestedEnv struct {
+		App struct {
+			Port  int `env:"PORT" env-description:"app port"`
+			Cache struct {
+				Type  string `env:"TYPE" env-description:"cache type"`
+				Redis struct {
+					Host string `env:"HOST" env-description:"redis host"`
+				} `env-prefix:"REDIS_"`
+			} `env-prefix:"CACHE_"`
+		} `env-prefix:"APP_"`
+		Database struct {
+			Host string `env:"HOST" env-description:"database host"`
+		} `env-prefix:"DATABASE_"`
+	}
+
+	customHeader := "test header:"
+
+	tests := []struct {
+		name       string
+		headerText *string
+		usageTexts []string
+		want       string
+	}{
+		{
+			name:       "no custom usage",
+			headerText: nil,
+			usageTexts: nil,
+			want: "Environment variables:" +
+				"\n  APP_CACHE_REDIS_HOST string\n    \tredis host" +
+				"\n  APP_CACHE_TYPE string\n    \tcache type" +
+				"\n  APP_PORT int\n    \tapp port" +
+				"\n  DATABASE_HOST string\n    \tdatabase host" +
+				"\n",
+		},
+
+		{
+			name:       "custom header",
+			headerText: &customHeader,
+			usageTexts: nil,
+			want: "test header:" +
+				"\n  APP_CACHE_REDIS_HOST string\n    \tredis host" +
+				"\n  APP_CACHE_TYPE string\n    \tcache type" +
+				"\n  APP_PORT int\n    \tapp port" +
+				"\n  DATABASE_HOST string\n    \tdatabase host" +
+				"\n",
+		},
+
+		{
+			name:       "custom usages",
+			headerText: nil,
+			usageTexts: []string{
+				"test1",
+				"test2",
+				"test3",
+			},
+			want: "test1\ntest2\ntest3\n" +
+				"\nEnvironment variables:" +
+				"\n  APP_CACHE_REDIS_HOST string\n    \tredis host" +
+				"\n  APP_CACHE_TYPE string\n    \tcache type" +
+				"\n  APP_PORT int\n    \tapp port" +
+				"\n  DATABASE_HOST string\n    \tdatabase host" +
+				"\n",
+		},
+
+		{
+			name:       "custom usages and header",
+			headerText: &customHeader,
+			usageTexts: []string{
+				"test1",
+				"test2",
+				"test3",
+			},
+			want: "test1\ntest2\ntest3\n" +
+				"\ntest header:" +
+				"\n  APP_CACHE_REDIS_HOST string\n    \tredis host" +
+				"\n  APP_CACHE_TYPE string\n    \tcache type" +
+				"\n  APP_PORT int\n    \tapp port" +
+				"\n  DATABASE_HOST string\n    \tdatabase host" +
+				"\n",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := &bytes.Buffer{}
+			uFuncs := make([]func(), 0, len(tt.usageTexts))
+			for _, text := range tt.usageTexts {
+				uFuncs = append(uFuncs, func(a string) func() {
+					return func() {
+						fmt.Fprintln(w, a)
+					}
+				}(text))
+			}
+			var cfg testNestedEnv
 			FUsage(w, &cfg, tt.headerText, uFuncs...)()
 			gotRaw, _ := ioutil.ReadAll(w)
 			got := string(gotRaw)
