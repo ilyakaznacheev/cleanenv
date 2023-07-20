@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -26,28 +27,28 @@ const (
 
 // Supported tags
 const (
-	// Name of the environment variable or a list of names
+	// TagEnv name of the environment variable or a list of names
 	TagEnv = "env"
 
-	// Value parsing layout (for types like time.Time)
+	// TagEnvLayout value parsing layout (for types like time.Time)
 	TagEnvLayout = "env-layout"
 
-	// Default value
+	// TagEnvDefault default value
 	TagEnvDefault = "env-default"
 
-	// Custom list and map separator
+	// TagEnvSeparator custom list and map separator
 	TagEnvSeparator = "env-separator"
 
-	// Environment variable description
+	// TagEnvDescription environment variable description
 	TagEnvDescription = "env-description"
 
-	// Flag to mark a field as updatable
+	// TagEnvUpd flag to mark a field as updatable
 	TagEnvUpd = "env-upd"
 
-	// Flag to mark a field as required
+	// TagEnvRequired flag to mark a field as required
 	TagEnvRequired = "env-required"
 
-	// Flag to specify prefix for structure fields
+	// TagEnvPrefix аlag to specify prefix for structure fields
 	TagEnvPrefix = "env-prefix"
 )
 
@@ -561,13 +562,15 @@ func GetDescription(cfg interface{}, headerText *string) (string, error) {
 		return "", err
 	}
 
-	var header, description string
+	var header string
 
 	if headerText != nil {
 		header = *headerText
 	} else {
 		header = "Environment variables:"
 	}
+
+	description := make([]string, 0)
 
 	for _, m := range meta {
 		if len(m.envList) == 0 {
@@ -584,14 +587,17 @@ func GetDescription(cfg interface{}, headerText *string) (string, error) {
 			if m.defValue != nil {
 				elemDescription += fmt.Sprintf(" (default %q)", *m.defValue)
 			}
-			description += elemDescription
+			description = append(description, elemDescription)
 		}
 	}
 
-	if description != "" {
-		return header + description, nil
+	if len(description) == 0 {
+		return "", nil
 	}
-	return "", nil
+
+	sort.Strings(description)
+
+	return header + strings.Join(description, ""), nil
 }
 
 // Usage returns a configuration usage help.

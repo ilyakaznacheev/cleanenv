@@ -28,10 +28,10 @@ func ExampleGetDescription() {
 	//Output: Environment variables:
 	//   ONE int64
 	//     	first parameter
-	//   TWO float64
-	//     	second parameter
 	//   THREE string
 	//     	third parameter
+	//   TWO float64
+	//     	second parameter
 }
 
 // ExampleGetDescription_defaults builds a description text from structure tags with description of default values
@@ -53,10 +53,10 @@ func ExampleGetDescription_defaults() {
 	//Output: Environment variables:
 	//   ONE int64
 	//     	first parameter (default "1")
-	//   TWO float64
-	//     	second parameter (default "2.2")
 	//   THREE string
 	//     	third parameter (default "test")
+	//   TWO float64
+	//     	second parameter (default "2.2")
 }
 
 // ExampleGetDescription_variableList builds a description text from structure tags with description of alternative variables
@@ -76,9 +76,9 @@ func ExampleGetDescription_variableList() {
 	//Output: Environment variables:
 	//   ONE int64
 	//     	first found parameter
-	//   TWO int64 (alternative to ONE)
-	//     	first found parameter
 	//   THREE int64 (alternative to ONE)
+	//     	first found parameter
+	//   TWO int64 (alternative to ONE)
 	//     	first found parameter
 }
 
@@ -103,10 +103,10 @@ func ExampleGetDescription_customHeaderText() {
 	//Output: Custom header text:
 	//   ONE int64
 	//     	first parameter
-	//   TWO float64
-	//     	second parameter
 	//   THREE string
 	//     	third parameter
+	//   TWO float64
+	//     	second parameter
 }
 
 // ExampleUpdateEnv updates variables in the configuration structure.
@@ -266,8 +266,8 @@ func ExampleUsage() {
 	// My sweet variables:
 	//   ONE int64
 	//     	first parameter
-	//   TWO float64
-	//     	second parameter
 	//   THREE string
 	//     	third parameter
+	//   TWO float64
+	//     	second parameter
 }
