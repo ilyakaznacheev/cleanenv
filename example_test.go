@@ -179,36 +179,49 @@ func ExampleReadEnvWithURL() {
 	//Output: https://images.cdn/
 }
 
-// MyField is an example type with a custom setter
-type MyField string
+// MyField1 is an example type with a custom setter
+type MyField1 string
 
-func (f *MyField) SetValue(s string) error {
+func (f *MyField1) SetValue(s string) error {
 	if s == "" {
 		return fmt.Errorf("field value can't be empty")
 	}
-	*f = MyField("my field is: " + s)
+	*f = MyField1("my field is: " + s)
 	return nil
 }
 
-func (f MyField) String() string {
+func (f MyField1) String() string {
 	return string(f)
+}
+
+// MyField2 is an example type with encoding.TextUnmarshaler implementation.
+type MyField2 string
+
+func (f *MyField2) UnmarshalText(p []byte) error {
+	if len(p) == 0 {
+		return fmt.Errorf("field value can't be empty")
+	}
+	*f = MyField2("my field is: " + string(p))
+	return nil
 }
 
 // Example_setter uses type with a custom setter to parse environment variable data
 func Example_setter() {
 	type config struct {
-		Default string  `env:"ONE"`
-		Custom  MyField `env:"TWO"`
+		Default string   `env:"ONE"`
+		Custom1 MyField1 `env:"TWO"`
+		Custom2 MyField2 `env:"THREE"`
 	}
 
 	var cfg config
 
 	os.Setenv("ONE", "test1")
 	os.Setenv("TWO", "test2")
+	os.Setenv("THREE", "test3")
 
 	cleanenv.ReadEnv(&cfg)
 	fmt.Printf("%+v\n", cfg)
-	//Output: {Default:test1 Custom:my field is: test2}
+	//Output: {Default:test1 Custom1:my field is: test2 Custom2:my field is: test3}
 }
 
 // ConfigUpdate is a type with a custom updater
