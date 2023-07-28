@@ -313,7 +313,7 @@ func TestReadEnvVars(t *testing.T) {
 			}
 			defer os.Clearenv()
 
-			if err := readEnvVars(tt.cfg, false); (err != nil) != tt.wantErr {
+			if err := readEnvVars(tt.cfg, parseOsEnvs(tt.cfg), false); (err != nil) != tt.wantErr {
 				t.Errorf("wrong error behavior %v, wantErr %v", err, tt.wantErr)
 			}
 			if !reflect.DeepEqual(tt.cfg, tt.want) {
@@ -374,7 +374,7 @@ func TestReadEnvVarsURL(t *testing.T) {
 			}
 			defer os.Clearenv()
 
-			if err := readEnvVars(tt.cfg, false); (err != nil) != tt.wantErr {
+			if err := readEnvVars(tt.cfg, parseOsEnvs(tt.cfg), false); (err != nil) != tt.wantErr {
 				t.Errorf("wrong error behavior %v, wantErr %v", err, tt.wantErr)
 			}
 			if !reflect.DeepEqual(tt.cfg, tt.want) {
@@ -425,7 +425,7 @@ func TestReadEnvVarsTime(t *testing.T) {
 			}
 			defer os.Clearenv()
 
-			if err := readEnvVars(tt.cfg, false); (err != nil) != tt.wantErr {
+			if err := readEnvVars(tt.cfg, parseOsEnvs(tt.cfg), false); (err != nil) != tt.wantErr {
 				t.Errorf("wrong error behavior %v, wantErr %v", err, tt.wantErr)
 			}
 			if !reflect.DeepEqual(tt.cfg, tt.want) {
@@ -467,7 +467,7 @@ func TestReadEnvVarsWithPrefix(t *testing.T) {
 	}
 
 	var cfg Config
-	if err := readEnvVars(&cfg, false); err != nil {
+	if err := readEnvVars(&cfg, parseOsEnvs(&cfg), false); err != nil {
 		t.Fatal("failed to read env vars", err)
 	}
 
@@ -554,7 +554,7 @@ func TestReadUpdateFunctions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := readEnvVars(tt.cfg, false); (err != nil) != tt.wantErr {
+			if err := readEnvVars(tt.cfg, parseOsEnvs(tt.cfg), false); (err != nil) != tt.wantErr {
 				t.Errorf("wrong error behavior %v, wantErr %v", err, tt.wantErr)
 			}
 			if !reflect.DeepEqual(tt.cfg, tt.want) {

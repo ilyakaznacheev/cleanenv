@@ -95,22 +95,17 @@ type Updater interface {
 //	    ...
 //	}
 func ReadConfig(path string, cfg interface{}) error {
-	err := parseFile(path, cfg)
-	if err != nil {
-		return err
-	}
-
-	return readEnvVars(cfg, false)
+	return parseFile(path, cfg)
 }
 
 // ReadEnv reads environment variables into the structure.
 func ReadEnv(cfg interface{}) error {
-	return readEnvVars(cfg, false)
+	return readEnvVars(cfg, parseOsEnvs(cfg), false)
 }
 
 // UpdateEnv rereads (updates) environment variables in the structure.
 func UpdateEnv(cfg interface{}) error {
-	return readEnvVars(cfg, true)
+	return readEnvVars(cfg, parseOsEnvs(cfg), true)
 }
 
 // parseFile parses configuration file according to it's extension
@@ -179,19 +174,13 @@ func parseEDN(r io.Reader, str interface{}) error {
 // parseENV, in fact, doesn't fill the structure with environment variable values.
 // It just parses ENV file and sets all variables to the environment.
 // Thus, the structure should be filled at the next steps.
-func parseENV(r io.Reader, _ interface{}) error {
+func parseENV(r io.Reader, cfg interface{}) error {
 	vars, err := godotenv.Parse(r)
 	if err != nil {
 		return err
 	}
 
-	for env, val := range vars {
-		if err = os.Setenv(env, val); err != nil {
-			return fmt.Errorf("set environment: %w", err)
-		}
-	}
-
-	return nil
+	return readEnvVars(cfg, vars, false)
 }
 
 // parseSlice parses value into a slice of given type
@@ -400,8 +389,28 @@ func readStructMetadata(cfgRoot interface{}) ([]structMeta, error) {
 	return metas, nil
 }
 
+// parseOsEnvs parses environment variables into map
+func parseOsEnvs(cfg interface{}) (envs map[string]string) {
+	envs = make(map[string]string)
+	metaInfo, err := readStructMetadata(cfg)
+	if err != nil {
+		return
+	}
+
+	for _, meta := range metaInfo {
+		for _, env := range meta.envList {
+			if value, ok := os.LookupEnv(env); ok {
+				envs[env] = value
+				break
+			}
+		}
+	}
+
+	return
+}
+
 // readEnvVars reads environment variables to the provided configuration structure
-func readEnvVars(cfg interface{}, update bool) error {
+func readEnvVars(cfg interface{}, envs map[string]string, update bool) error {
 	metaInfo, err := readStructMetadata(cfg)
 	if err != nil {
 		return err
@@ -422,7 +431,7 @@ func readEnvVars(cfg interface{}, update bool) error {
 		var rawValue *string
 
 		for _, env := range meta.envList {
-			if value, ok := os.LookupEnv(env); ok {
+			if value, ok := envs[env]; ok {
 				rawValue = &value
 				break
 			}
