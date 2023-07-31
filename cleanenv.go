@@ -152,23 +152,38 @@ func parseFile(path string, cfg interface{}) error {
 
 // ParseYAML parses YAML from reader to data structure
 func ParseYAML(r io.Reader, str interface{}) error {
-	return yaml.NewDecoder(r).Decode(str)
+	err := yaml.NewDecoder(r).Decode(str)
+	if err != nil {
+		return err
+	}
+	return setDefaults(str)
 }
 
 // ParseJSON parses JSON from reader to data structure
 func ParseJSON(r io.Reader, str interface{}) error {
-	return json.NewDecoder(r).Decode(str)
+	err := json.NewDecoder(r).Decode(str)
+	if err != nil {
+		return err
+	}
+	return setDefaults(str)
 }
 
 // ParseTOML parses TOML from reader to data structure
 func ParseTOML(r io.Reader, str interface{}) error {
 	_, err := toml.NewDecoder(r).Decode(str)
-	return err
+	if err != nil {
+		return err
+	}
+	return setDefaults(str)
 }
 
 // parseEDN parses EDN from reader to data structure
 func parseEDN(r io.Reader, str interface{}) error {
-	return edn.NewDecoder(r).Decode(str)
+	err := edn.NewDecoder(r).Decode(str)
+	if err != nil {
+		return err
+	}
+	return setDefaults(str)
 }
 
 // parseENV, in fact, doesn't fill the structure with environment variable values.
@@ -407,6 +422,36 @@ func parseOsEnvs(cfg interface{}) (envs map[string]string) {
 	}
 
 	return
+}
+
+func setDefaults(cfg interface{}) error {
+	metaInfo, err := readStructMetadata(cfg)
+	if err != nil {
+		return err
+	}
+
+	if updater, ok := cfg.(Updater); ok {
+		if err := updater.Update(); err != nil {
+			return err
+		}
+	}
+
+	for _, meta := range metaInfo {
+		if meta.required && meta.isFieldValueZero() {
+			return fmt.Errorf(
+				"field %q is required but the value is not provided",
+				meta.fieldName,
+			)
+		}
+
+		if meta.isFieldValueZero() && meta.defValue != nil {
+			if err := parseValue(meta.fieldValue, *meta.defValue, meta.separator, meta.layout); err != nil {
+				return fmt.Errorf("parsing default value for field %v: %v", meta.fieldName, err)
+			}
+		}
+	}
+
+	return nil
 }
 
 // readEnvVars reads environment variables to the provided configuration structure

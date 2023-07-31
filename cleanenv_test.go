@@ -693,7 +693,11 @@ two = 2`,
 }
 
 func TestParseFileEnv(t *testing.T) {
-	type dummy struct{}
+	type dummy struct {
+		Test1 string `env:"TEST1"`
+		Test2 string `env:"TEST2"`
+		Test3 string `env:"TEST3"`
+	}
 
 	tests := []struct {
 		name    string
@@ -757,8 +761,15 @@ func TestParseFileEnv(t *testing.T) {
 			if err = parseFile(tmpFile.Name(), &cfg); (err != nil) != tt.wantErr {
 				t.Errorf("wrong error behavior %v, wantErr %v", err, tt.wantErr)
 			}
+
+			vals := map[string]string{
+				"TEST1": cfg.Test1,
+				"TEST2": cfg.Test2,
+				"TEST3": cfg.Test3,
+			}
+
 			for key, val := range tt.has {
-				if envVal := os.Getenv(key); err == nil && val != envVal {
+				if envVal := vals[key]; err == nil && val != envVal {
 					t.Errorf("wrong value %s of var %s, want %s", envVal, key, val)
 				}
 			}
@@ -1150,8 +1161,8 @@ func TestReadConfig(t *testing.T) {
 				"TEST_STRING": "fromEnv",
 			},
 			want: &config{
-				Number:    3,
-				String:    "fromEnv",
+				Number:    2,
+				String:    "test",
 				NoDefault: "NoDefault",
 				NoEnv:     "this",
 			},
@@ -1186,8 +1197,8 @@ no-env: this
 				"TEST_STRING": "test",
 			},
 			want: &config{
-				Number:    2,
-				String:    "test",
+				Number:    1,
+				String:    "default",
 				NoDefault: "",
 				NoEnv:     "default",
 			},
@@ -1208,8 +1219,8 @@ no-env: this
 				"TEST_STRING": "fromEnv",
 			},
 			want: &config{
-				Number:    3,
-				String:    "fromEnv",
+				Number:    2,
+				String:    "test",
 				NoDefault: "NoDefault",
 				NoEnv:     "this",
 			},
