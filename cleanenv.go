@@ -429,9 +429,18 @@ func readEnvVars(cfg interface{}, update bool) error {
 		}
 
 		if rawValue == nil && meta.required && meta.isFieldValueZero() {
+			if len(meta.envList) == 0 {
+				return fmt.Errorf("env list for field %q is empty but is set as required", meta.fieldName)
+			}
+			if len(meta.envList) == 1 {
+				return fmt.Errorf(
+					"environment variable %q is required but the value is not provided",
+					meta.envList[0],
+				)
+			}
 			return fmt.Errorf(
-				"field %q is required but the value is not provided",
-				meta.fieldName,
+				"environment variable %q (aliases=%v) is required but the value is not provided",
+				meta.envList[0], meta.envList[1:],
 			)
 		}
 
