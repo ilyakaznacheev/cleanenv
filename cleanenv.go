@@ -588,7 +588,7 @@ func GetDescription(cfg interface{}, headerText *string) (string, error) {
 		}
 
 		for idx, env := range m.envList {
-			var required string
+			required := "  "
 			if m.required && idx == 0 {
 				required = "* "
 			}
