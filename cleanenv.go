@@ -588,8 +588,11 @@ func GetDescription(cfg interface{}, headerText *string) (string, error) {
 		}
 
 		for idx, env := range m.envList {
-
-			elemDescription := fmt.Sprintf("\n  %s %s", env, m.fieldValue.Kind())
+			required := "  "
+			if m.required && idx == 0 {
+				required = " *"
+			}
+			elemDescription := fmt.Sprintf("\n%s%s %s", required, env, m.fieldValue.Kind())
 			if idx > 0 {
 				elemDescription += fmt.Sprintf(" (alternative to %s)", m.envList[0])
 			}
