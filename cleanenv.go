@@ -145,6 +145,8 @@ func parseFile(path string, cfg interface{}) error {
 	case ".edn":
 		err = parseEDN(f, cfg)
 	case ".env":
+	case ".env.dev":
+	case ".env.prod":
 		err = parseENV(f, cfg)
 	default:
 		return fmt.Errorf("file format '%s' doesn't supported by the parser", ext)
