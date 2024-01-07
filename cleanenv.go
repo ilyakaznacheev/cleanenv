@@ -54,6 +54,9 @@ const (
 	TagEnvPrefix = "env-prefix"
 )
 
+// ParseFunc defines the type signature that parser functions follow
+type ParseFunc func(io.Reader, interface{}) error
+
 // Setter is an interface for a custom value setter.
 //
 // To implement a custom value setter you need to add a SetValue function to your type that will receive a string raw value:
@@ -96,6 +99,11 @@ type Updater interface {
 //	    ...
 //	}
 func ReadConfig(path string, cfg interface{}) error {
+	parseFunc, err := getParseFunc(strings.ToLower(filepath.Ext(path)))
+	if err != nil {
+		return err
+	}
+
 	// Open file
 	f, err := os.OpenFile(path, os.O_RDONLY|os.O_SYNC, 0)
 	if err != nil {
@@ -103,7 +111,7 @@ func ReadConfig(path string, cfg interface{}) error {
 	}
 	defer f.Close()
 
-	err = parseFile(f, strings.ToLower(filepath.Ext(path)), cfg)
+	err = parseFunc(f, cfg)
 	if err != nil {
 		return err
 	}
@@ -111,16 +119,20 @@ func ReadConfig(path string, cfg interface{}) error {
 	return readEnvVars(cfg, false)
 }
 
-func ReadConfigFS(fsys fs.FS, filename string, cfg interface{}) error {
-	// Open file
-	f, err := fsys.Open(filename)
+func ReadConfigFS(fsys fs.FS, fname string, cfg interface{}) error {
+	parseFunc, err := getParseFunc(strings.ToLower(filepath.Ext(fname)))
+	if err != nil {
+		return err
+	}
+
+	f, err := fsys.Open(fname)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 
 	// Parse
-	err = parseFile(f, strings.ToLower(filepath.Ext(filename)), cfg)
+	err = parseFunc(f, cfg)
 	if err != nil {
 		return err
 	}
@@ -138,7 +150,7 @@ func UpdateEnv(cfg interface{}) error {
 	return readEnvVars(cfg, true)
 }
 
-// parseFile parses configuration file according to it's extension
+// getParseFunc returns the parsing function based on the file extension passed in.
 //
 // Currently following file extensions are supported:
 //
@@ -151,27 +163,21 @@ func UpdateEnv(cfg interface{}) error {
 // - env
 //
 // - edn
-func parseFile(f fs.File, ext string, cfg interface{}) error {
-	// parse the file depending on the file type]
-	var err error
+func getParseFunc(ext string) (ParseFunc, error) {
 	switch ext {
 	case ".yaml", ".yml":
-		err = ParseYAML(f, cfg)
+		return ParseYAML, nil
 	case ".json":
-		err = ParseJSON(f, cfg)
+		return ParseJSON, nil
 	case ".toml":
-		err = ParseTOML(f, cfg)
+		return ParseTOML, nil
 	case ".edn":
-		err = parseEDN(f, cfg)
+		return parseEDN, nil
 	case ".env":
-		err = parseENV(f, cfg)
+		return parseENV, nil
 	default:
-		return fmt.Errorf("file format '%s' doesn't supported by the parser", ext)
+		return nil, fmt.Errorf("file format '%s' is not supported by the parser", ext)
 	}
-	if err != nil {
-		return fmt.Errorf("config file parsing error: %s", err.Error())
-	}
-	return nil
 }
 
 // ParseYAML parses YAML from reader to data structure
