@@ -104,7 +104,6 @@ func ReadConfig(path string, cfg interface{}) error {
 		return err
 	}
 
-	// Open file
 	f, err := os.OpenFile(path, os.O_RDONLY|os.O_SYNC, 0)
 	if err != nil {
 		return err
@@ -119,6 +118,25 @@ func ReadConfig(path string, cfg interface{}) error {
 	return readEnvVars(cfg, false)
 }
 
+// ReadConfigFS reads configuration file from provided filesystem and parses it depending on tags in structure provided.
+//
+// Example:
+//
+//		type ConfigDatabase struct {
+//			Port     string `yaml:"port" env:"PORT" env-default:"5432"`
+//			Host     string `yaml:"host" env:"HOST" env-default:"localhost"`
+//			Name     string `yaml:"name" env:"NAME" env-default:"postgres"`
+//			User     string `yaml:"user" env:"USER" env-default:"user"`
+//			Password string `yaml:"password" env:"PASSWORD"`
+//		}
+//
+//		var cfg ConfigDatabase
+//
+//		fsys := os.DirFS("/example/config/folder")
+//	 	err := cleanenv.ReadConfigFS(fsys, "config.yml", &cfg)
+//		if err != nil {
+//			...
+//		}
 func ReadConfigFS(fsys fs.FS, fname string, cfg interface{}) error {
 	parseFunc, err := getParseFunc(strings.ToLower(filepath.Ext(fname)))
 	if err != nil {
@@ -131,7 +149,6 @@ func ReadConfigFS(fsys fs.FS, fname string, cfg interface{}) error {
 	}
 	defer f.Close()
 
-	// Parse
 	err = parseFunc(f, cfg)
 	if err != nil {
 		return err
