@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -95,7 +96,31 @@ type Updater interface {
 //	    ...
 //	}
 func ReadConfig(path string, cfg interface{}) error {
-	err := parseFile(path, cfg)
+	// Open file
+	f, err := os.OpenFile(path, os.O_RDONLY|os.O_SYNC, 0)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	err = parseFile(f, strings.ToLower(filepath.Ext(path)), cfg)
+	if err != nil {
+		return err
+	}
+
+	return readEnvVars(cfg, false)
+}
+
+func ReadConfigFS(fsys fs.FS, filename string, cfg interface{}) error {
+	// Open file
+	f, err := fsys.Open(filename)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	// Parse
+	err = parseFile(f, strings.ToLower(filepath.Ext(filename)), cfg)
 	if err != nil {
 		return err
 	}
@@ -126,16 +151,10 @@ func UpdateEnv(cfg interface{}) error {
 // - env
 //
 // - edn
-func parseFile(path string, cfg interface{}) error {
-	// open the configuration file
-	f, err := os.OpenFile(path, os.O_RDONLY|os.O_SYNC, 0)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	// parse the file depending on the file type
-	switch ext := strings.ToLower(filepath.Ext(path)); ext {
+func parseFile(f fs.File, ext string, cfg interface{}) error {
+	// parse the file depending on the file type]
+	var err error
+	switch ext {
 	case ".yaml", ".yml":
 		err = ParseYAML(f, cfg)
 	case ".json":
