@@ -5,11 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"io/ioutil"
 	"net/url"
 	"os"
 	"reflect"
 	"testing"
+	"testing/fstest"
 	"time"
 )
 
@@ -564,210 +566,6 @@ func TestReadUpdateFunctions(t *testing.T) {
 	}
 }
 
-func TestParseFile(t *testing.T) {
-	type configObject struct {
-		One int `yaml:"one" json:"one" toml:"one"`
-		Two int `yaml:"two" json:"two" toml:"two"`
-	}
-	type config struct {
-		Number  int64        `yaml:"number" json:"number" toml:"number"`
-		Float   float64      `yaml:"float" json:"float" toml:"float"`
-		String  string       `yaml:"string" json:"string" toml:"string"`
-		Boolean bool         `yaml:"boolean" json:"boolean" toml:"boolean"`
-		Object  configObject `yaml:"object" json:"object" toml:"object"`
-		Array   []int        `yaml:"array" json:"array" toml:"array"`
-	}
-
-	wantConfig := config{
-		Number:  1,
-		Float:   2.3,
-		String:  "test",
-		Boolean: true,
-		Object:  configObject{1, 2},
-		Array:   []int{1, 2, 3},
-	}
-
-	tests := []struct {
-		name    string
-		file    string
-		ext     string
-		want    *config
-		wantErr bool
-	}{
-		{
-			name: "yaml",
-			file: `
-number: 1
-float: 2.3
-string: test
-boolean: yes
-object:
-  one: 1
-  two: 2
-array: [1, 2, 3]`,
-			ext:     "yaml",
-			want:    &wantConfig,
-			wantErr: false,
-		},
-
-		{
-			name: "json",
-			file: `{
-	"number": 1,
-	"float": 2.3,
-	"string": "test",
-	"boolean": true,
-	"object": {
-		"one": 1,
-		"two": 2
-	},
-	"array": [1, 2, 3]
-}`,
-			ext:     "json",
-			want:    &wantConfig,
-			wantErr: false,
-		},
-
-		{
-			name: "toml",
-			file: `
-number = 1
-float = 2.3
-string = "test"
-boolean = true
-array = [1, 2, 3]
-[object]
-one = 1
-two = 2`,
-			ext:     "toml",
-			want:    &wantConfig,
-			wantErr: false,
-		},
-
-		{
-			name:    "unknown",
-			file:    "-",
-			ext:     "",
-			want:    nil,
-			wantErr: true,
-		},
-
-		{
-			name:    "parsing error",
-			file:    "-",
-			ext:     "json",
-			want:    nil,
-			wantErr: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tmpFile, err := ioutil.TempFile(os.TempDir(), fmt.Sprintf("*.%s", tt.ext))
-			if err != nil {
-				t.Fatal("cannot create temporary file:", err)
-			}
-			defer os.Remove(tmpFile.Name())
-
-			text := []byte(tt.file)
-			if _, err = tmpFile.Write(text); err != nil {
-				t.Fatal("failed to write to temporary file:", err)
-			}
-
-			var cfg config
-			if err = parseFile(tmpFile.Name(), &cfg); (err != nil) != tt.wantErr {
-				t.Errorf("wrong error behavior %v, wantErr %v", err, tt.wantErr)
-			}
-			if err == nil && !reflect.DeepEqual(&cfg, tt.want) {
-				t.Errorf("wrong data %v, want %v", &cfg, tt.want)
-			}
-		})
-	}
-
-	t.Run("invalid path", func(t *testing.T) {
-		err := parseFile("invalid file path", nil)
-		if err == nil {
-			t.Error("expected error for invalid file path")
-		}
-	})
-}
-
-func TestParseFileEnv(t *testing.T) {
-	type dummy struct{}
-
-	tests := []struct {
-		name    string
-		rawFile string
-		has     map[string]string
-		want    map[string]string
-		wantErr bool
-	}{
-		{
-			name: "simple file",
-			has: map[string]string{
-				"TEST1": "aaa",
-				"TEST2": "bbb",
-				"TEST3": "ccc",
-			},
-			want: map[string]string{
-				"TEST1": "aaa",
-				"TEST2": "bbb",
-				"TEST3": "ccc",
-			},
-			wantErr: false,
-		},
-
-		{
-			name:    "empty file",
-			has:     map[string]string{},
-			want:    map[string]string{},
-			wantErr: false,
-		},
-
-		{
-			name:    "error",
-			rawFile: "-",
-			wantErr: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tmpFile, err := ioutil.TempFile(os.TempDir(), "*.env")
-			if err != nil {
-				t.Fatal("cannot create temporary file:", err)
-			}
-			defer os.Remove(tmpFile.Name())
-
-			var file string
-			if tt.rawFile == "" {
-				for key, val := range tt.has {
-					file += fmt.Sprintf("%s=%s\n", key, val)
-				}
-			} else {
-				file = tt.rawFile
-			}
-
-			text := []byte(file)
-			if _, err = tmpFile.Write(text); err != nil {
-				t.Fatal("failed to write to temporary file:", err)
-			}
-
-			var cfg dummy
-			if err = parseFile(tmpFile.Name(), &cfg); (err != nil) != tt.wantErr {
-				t.Errorf("wrong error behavior %v, wantErr %v", err, tt.wantErr)
-			}
-			for key, val := range tt.has {
-				if envVal := os.Getenv(key); err == nil && val != envVal {
-					t.Errorf("wrong value %s of var %s, want %s", envVal, key, val)
-				}
-			}
-
-			os.Clearenv()
-		})
-	}
-}
-
 func TestGetDescription(t *testing.T) {
 	type testSingleEnv struct {
 		One   int `env:"ONE" env-description:"one"`
@@ -1271,6 +1069,314 @@ no-env: this
 			}
 			if err == nil && !reflect.DeepEqual(&cfg, tt.want) {
 				t.Errorf("wrong data %v, want %v", &cfg, tt.want)
+			}
+		})
+	}
+}
+
+func TestReadConfigFS(t *testing.T) {
+	type config struct {
+		Foo string `yaml:"foo" json:"foo" toml:"foo" edn:"foo" env:"TEST_FOO" env-default:"test-env-default"`
+		Bar string `yaml:"bar" json:"bar" toml:"bar" edn:"bar"`
+	}
+
+	tests := []struct {
+		name    string
+		env     map[string]string
+		fsys    fs.FS
+		fname   string
+		want    *config
+		wantErr bool
+	}{
+		{
+			name: "env-default",
+			env:  map[string]string{},
+			fsys: fstest.MapFS{
+				"test.yaml": &fstest.MapFile{Data: []byte("valid: yaml")},
+			},
+			fname: "test.yaml",
+			want:  &config{Foo: "test-env-default"},
+		},
+		{
+			name: "env",
+			env: map[string]string{
+				"TEST_FOO": "test-env",
+			},
+			fsys: fstest.MapFS{
+				"test.yaml": &fstest.MapFile{Data: []byte("valid: yaml")},
+			},
+			fname: "test.yaml",
+			want:  &config{Foo: "test-env"},
+		},
+		{
+			name: "yaml",
+			fsys: fstest.MapFS{
+				"test.yaml": &fstest.MapFile{
+					Data: []byte(`foo: test-yaml
+bar: test-yaml`),
+				},
+			},
+			fname:   "test.yaml",
+			want:    &config{Foo: "test-yaml", Bar: "test-yaml"},
+			wantErr: false,
+		},
+		{
+			name: "yaml_and_env",
+			env: map[string]string{
+				"TEST_FOO": "test-env",
+			},
+			fsys: fstest.MapFS{
+				"test.yaml": &fstest.MapFile{
+					Data: []byte(`foo: test-yaml
+bar: test-yaml`),
+				},
+			},
+			fname:   "test.yaml",
+			want:    &config{Foo: "test-env", Bar: "test-yaml"},
+			wantErr: false,
+		},
+		{
+			name: "yaml_and_env_default",
+			fsys: fstest.MapFS{
+				"test.yaml": &fstest.MapFile{
+					Data: []byte(`bar: test-yaml`),
+				},
+			},
+			fname:   "test.yaml",
+			want:    &config{Foo: "test-env-default", Bar: "test-yaml"},
+			wantErr: false,
+		},
+		{
+			name: "json",
+			fsys: fstest.MapFS{
+				"test.json": &fstest.MapFile{
+					Data: []byte(`{
+	"foo": "test-json",
+	"bar": "test-json"
+}`),
+				},
+			},
+			fname:   "test.json",
+			want:    &config{Foo: "test-json", Bar: "test-json"},
+			wantErr: false,
+		},
+		{
+			name: "json_and_env",
+			env: map[string]string{
+				"foo": "test-env",
+			},
+			fsys: fstest.MapFS{
+				"test.json": &fstest.MapFile{
+					Data: []byte(`{
+	"foo": "test-json",
+	"bar": "test-json"
+}`),
+				},
+			},
+			fname:   "test.json",
+			want:    &config{Foo: "test-json", Bar: "test-json"},
+			wantErr: false,
+		},
+		{
+			name: "json_and_env_default",
+			fsys: fstest.MapFS{
+				"test.json": &fstest.MapFile{
+					Data: []byte(`{
+	"bar": "test-json"
+}`),
+				},
+			},
+			fname:   "test.json",
+			want:    &config{Foo: "test-env-default", Bar: "test-json"},
+			wantErr: false,
+		},
+		{
+			name: "toml",
+			fsys: fstest.MapFS{
+				"test.toml": &fstest.MapFile{
+					Data: []byte(`foo = "test-toml"
+bar = "test-toml"`),
+				},
+			},
+			fname:   "test.toml",
+			want:    &config{Foo: "test-toml", Bar: "test-toml"},
+			wantErr: false,
+		},
+		{
+			name: "toml_and_env",
+			env: map[string]string{
+				"TEST_FOO": "test-env",
+			},
+			fsys: fstest.MapFS{
+				"test.toml": &fstest.MapFile{
+					Data: []byte(`foo = "test-toml"
+bar = "test-toml"`),
+				},
+			},
+			fname:   "test.toml",
+			want:    &config{Foo: "test-env", Bar: "test-toml"},
+			wantErr: false,
+		},
+		{
+			name: "toml_and_env_default",
+			fsys: fstest.MapFS{
+				"test.toml": &fstest.MapFile{
+					Data: []byte(`bar = "test-toml"`),
+				},
+			},
+			fname:   "test.toml",
+			want:    &config{Foo: "test-env-default", Bar: "test-toml"},
+			wantErr: false,
+		},
+		{
+			name: "edn",
+			fsys: fstest.MapFS{
+				"test.edn": &fstest.MapFile{
+					Data: []byte(`{
+	:foo "test-edn"
+	:bar "test-edn"
+}`),
+				},
+			},
+			fname:   "test.edn",
+			want:    &config{Foo: "test-edn", Bar: "test-edn"},
+			wantErr: false,
+		},
+		{
+			name: "edn_and_env",
+			env: map[string]string{
+				"TEST_FOO": "test-env",
+			},
+			fsys: fstest.MapFS{
+				"test.edn": &fstest.MapFile{
+					Data: []byte(`{
+	:foo "test-edn"
+	:bar "test-edn"
+}`),
+				},
+			},
+			fname:   "test.edn",
+			want:    &config{Foo: "test-env", Bar: "test-edn"},
+			wantErr: false,
+		},
+		{
+			name: "edn_and_env_default",
+			fsys: fstest.MapFS{
+				"test.edn": &fstest.MapFile{
+					Data: []byte(`{
+	:bar "test-edn"
+}`),
+				},
+			},
+			fname:   "test.edn",
+			want:    &config{Foo: "test-env-default", Bar: "test-edn"},
+			wantErr: false,
+		},
+		{
+			name:    "no extension",
+			fsys:    fstest.MapFS{},
+			fname:   "test",
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "parsing error",
+			fsys: fstest.MapFS{
+				"test.json": &fstest.MapFile{
+					Data: []byte("-"),
+				},
+			},
+			fname:   "test.json",
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "file not found",
+			fsys:    fstest.MapFS{},
+			fname:   "test.json",
+			want:    nil,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			for k, v := range tt.env {
+				t.Setenv(k, v)
+			}
+
+			var cfg config
+			err := ReadConfigFS(tt.fsys, tt.fname, &cfg)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("wrong error behavior %v, wantErr %v", err, tt.wantErr)
+			}
+			if err == nil && !reflect.DeepEqual(&cfg, tt.want) {
+				t.Errorf("wrong data %v, want %v", &cfg, tt.want)
+			}
+		})
+	}
+
+}
+
+func TestGetParseFunc(t *testing.T) {
+	tests := []struct {
+		name    string
+		ext     string
+		want    ParseFunc
+		wantErr bool
+	}{
+		{
+			name:    "yaml",
+			ext:     ".yaml",
+			want:    ParseYAML,
+			wantErr: false,
+		},
+		{
+			name:    "yml",
+			ext:     ".yml",
+			want:    ParseYAML,
+			wantErr: false,
+		},
+		{
+			name:    "json",
+			ext:     ".json",
+			want:    ParseJSON,
+			wantErr: false,
+		},
+		{
+			name:    "toml",
+			ext:     ".toml",
+			want:    ParseTOML,
+			wantErr: false,
+		},
+		{
+			name:    "edn",
+			ext:     ".edn",
+			want:    parseEDN,
+			wantErr: false,
+		},
+		{
+			name:    "env",
+			ext:     ".env",
+			want:    parseENV,
+			wantErr: false,
+		},
+		{
+			name:    "unsupported extension",
+			ext:     ".invalid",
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := getParseFunc(tt.ext)
+			if (err != nil) != tt.wantErr {
+				t.Error("unexpected err:", err)
+			}
+			if reflect.ValueOf(got).Pointer() != reflect.ValueOf(tt.want).Pointer() {
+				t.Errorf("wrong parsefunc: got %v, want %v", got, tt.want)
 			}
 		})
 	}
