@@ -15,10 +15,10 @@ type config struct {
 
 type databaseConfig struct {
 	User     string `yaml:"user"`
-	Password string `yaml:"password"`
+	Password string `env-required:"true" yaml:"password" env:"DB_PASSWORD"`
 	Name     string `yaml:"name"`
 	Host     string `yaml:"host"`
-	Port     string `yaml:"port"`
+	Port     string `yaml:"port" env:"DB_PORT"`
 	SSLMode  string `yaml:"ssl_mode"`
 }
 
@@ -28,7 +28,7 @@ type emailService struct {
 }
 
 func main() {
-	cfg, err := ParseConfigFiles("./db_config.yaml", "./email_config.yaml", "./general_config.yaml")
+	cfg, err := ParseConfigFiles("./db_config.yaml", "./email_config.yaml", "./general_config.yaml", "./.env.local")
 	if err != nil {
 		log.Printf("Error parsing config files: %v", err)
 		return
