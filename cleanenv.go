@@ -53,6 +53,10 @@ const (
 	TagEnvPrefix = "env-prefix"
 )
 
+var (
+	RequiredCheck = true
+)
+
 // Setter is an interface for a custom value setter.
 //
 // To implement a custom value setter you need to add a SetValue function to your type that will receive a string raw value:
@@ -73,6 +77,20 @@ type Setter interface {
 // Updater gives an ability to implement custom update function for a field or a whole structure
 type Updater interface {
 	Update() error
+}
+
+type unsupportedFileFormat struct {
+	ftype string
+}
+
+func (e *unsupportedFileFormat) Error() string {
+	return fmt.Sprintf("file format '%s' doesn't supported by the parser", e.ftype)
+}
+
+func newErrorUnsupportedFileFormat(ftype string) *unsupportedFileFormat {
+	return &unsupportedFileFormat{
+		ftype: ftype,
+	}
 }
 
 // ReadConfig reads configuration file and parses it depending on tags in structure provided.
@@ -134,8 +152,27 @@ func parseFile(path string, cfg interface{}) error {
 	}
 	defer f.Close()
 
+	ftype := "."
+	for ftype != "" {
+		ftype = strings.ToLower(filepath.Ext(path))
+		err = parseFileByType(ftype, f, cfg)
+		if err != nil {
+			if _, ok := err.(*unsupportedFileFormat); ok {
+				path = strings.TrimSuffix(path, filepath.Ext(path))
+			} else {
+				return fmt.Errorf("config file parsing error: %s", err.Error())
+			}
+		} else {
+			ftype = ""
+		}
+	}
+
+	return nil
+}
+
+func parseFileByType(ftype string, f *os.File, cfg interface{}) (err error) {
 	// parse the file depending on the file type
-	switch ext := strings.ToLower(filepath.Ext(path)); ext {
+	switch ftype {
 	case ".yaml", ".yml":
 		err = ParseYAML(f, cfg)
 	case ".json":
@@ -147,12 +184,9 @@ func parseFile(path string, cfg interface{}) error {
 	case ".env":
 		err = parseENV(f, cfg)
 	default:
-		return fmt.Errorf("file format '%s' doesn't supported by the parser", ext)
+		return newErrorUnsupportedFileFormat(ftype)
 	}
-	if err != nil {
-		return fmt.Errorf("config file parsing error: %s", err.Error())
-	}
-	return nil
+	return err
 }
 
 // ParseYAML parses YAML from reader to data structure
@@ -428,7 +462,7 @@ func readEnvVars(cfg interface{}, update bool) error {
 			}
 		}
 
-		if rawValue == nil && meta.required && meta.isFieldValueZero() {
+		if RequiredCheck && rawValue == nil && meta.required && meta.isFieldValueZero() {
 			return fmt.Errorf(
 				"field %q is required but the value is not provided",
 				meta.fieldName,
