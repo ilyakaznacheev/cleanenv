@@ -333,6 +333,9 @@ func TestReadEnvErrors(t *testing.T) {
 			Host string        `env:"HOST" env-required:"true"`
 			TTL  time.Duration `env:"TTL"`
 		} `env-prefix:"TEST_ERRORS_DATABASE_"`
+		ThirdStruct struct {
+			Host string `env:"HOST"`
+		} `env-prefix:"TEST_ERRORS_THIRD_"`
 	}
 
 	tests := []struct {
@@ -348,7 +351,7 @@ func TestReadEnvErrors(t *testing.T) {
 			cfg:     &testEnvErrors{},
 			errorAs: RequireError{},
 			errorWant: RequireError{
-				FieldPath: []string{"Database"},
+				FieldPath: "Database.",
 				FieldName: "Host",
 				EnvName:   "TEST_ERRORS_DATABASE_HOST",
 			},
@@ -364,6 +367,7 @@ func TestReadEnvErrors(t *testing.T) {
 			errorWant: ParsingError{
 				Err:       fmt.Errorf("time: invalid duration \"bad-value\""),
 				FieldName: "TTL",
+				FieldPath: "Database.",
 				EnvName:   "TEST_ERRORS_DATABASE_TTL",
 			},
 		},

@@ -2,16 +2,15 @@ package cleanenv
 
 import (
 	"fmt"
-	"strings"
 )
 
 type RequireError struct {
 	FieldName string
-	FieldPath []string
+	FieldPath string
 	EnvName   string
 }
 
-func newRequireError(fieldName string, fieldPath []string, envName string) RequireError {
+func newRequireError(fieldName string, fieldPath string, envName string) RequireError {
 	return RequireError{
 		FieldName: fieldName,
 		FieldPath: fieldPath,
@@ -22,18 +21,18 @@ func newRequireError(fieldName string, fieldPath []string, envName string) Requi
 func (r RequireError) Error() string {
 	return fmt.Sprintf(
 		"field %q is required but the value is not provided",
-		strings.Join(append(r.FieldPath, r.FieldName), "."),
+		r.FieldPath+r.FieldName,
 	)
 }
 
 type ParsingError struct {
 	Err       error
 	FieldName string
-	FieldPath []string
+	FieldPath string
 	EnvName   string
 }
 
-func newParsingError(fieldName string, fieldPath []string, envName string, err error) ParsingError {
+func newParsingError(fieldName string, fieldPath string, envName string, err error) ParsingError {
 	return ParsingError{
 		FieldName: fieldName,
 		FieldPath: fieldPath,
@@ -44,8 +43,8 @@ func newParsingError(fieldName string, fieldPath []string, envName string, err e
 
 func (p ParsingError) Error() string {
 	return fmt.Sprintf(
-		"parsing field %v env %v: %v",
-		strings.Join(append(p.FieldPath, p.FieldName), "."),
+		"parsing field %q env %q: %v",
+		p.FieldPath+p.FieldName,
 		p.EnvName,
 		p.Err,
 	)

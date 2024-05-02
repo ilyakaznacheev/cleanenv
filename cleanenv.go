@@ -249,7 +249,7 @@ type structMeta struct {
 	description string
 	updatable   bool
 	required    bool
-	path        []string
+	path        string
 }
 
 // isFieldValueZero determines if fieldValue empty or not
@@ -303,10 +303,10 @@ func readStructMetadata(cfgRoot interface{}) ([]structMeta, error) {
 	type cfgNode struct {
 		Val    interface{}
 		Prefix string
-		Path   []string
+		Path   string
 	}
 
-	cfgStack := []cfgNode{{cfgRoot, "", nil}}
+	cfgStack := []cfgNode{{cfgRoot, "", ""}}
 	metas := make([]structMeta, 0)
 
 	for i := 0; i < len(cfgStack); i++ {
@@ -347,7 +347,7 @@ func readStructMetadata(cfgRoot interface{}) ([]structMeta, error) {
 					cfgStack = append(cfgStack, cfgNode{
 						Val:    fld.Addr().Interface(),
 						Prefix: sPrefix + prefix,
-						Path:   append(cfgStack[i].Path, fType.Name),
+						Path:   fmt.Sprintf("%s%s.", cfgStack[i].Path, fType.Name),
 					})
 					continue
 				}
