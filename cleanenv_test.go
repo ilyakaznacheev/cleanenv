@@ -348,6 +348,7 @@ func TestReadEnvErrors(t *testing.T) {
 			cfg:     &testEnvErrors{},
 			errorAs: RequireError{},
 			errorWant: RequireError{
+				FieldPath: []string{"Database"},
 				FieldName: "Host",
 				EnvName:   "TEST_ERRORS_DATABASE_HOST",
 			},

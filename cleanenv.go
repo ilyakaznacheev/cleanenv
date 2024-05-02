@@ -249,6 +249,7 @@ type structMeta struct {
 	description string
 	updatable   bool
 	required    bool
+	path        []string
 }
 
 // isFieldValueZero determines if fieldValue empty or not
@@ -302,9 +303,10 @@ func readStructMetadata(cfgRoot interface{}) ([]structMeta, error) {
 	type cfgNode struct {
 		Val    interface{}
 		Prefix string
+		Path   []string
 	}
 
-	cfgStack := []cfgNode{{cfgRoot, ""}}
+	cfgStack := []cfgNode{{cfgRoot, "", nil}}
 	metas := make([]structMeta, 0)
 
 	for i := 0; i < len(cfgStack); i++ {
@@ -342,7 +344,11 @@ func readStructMetadata(cfgRoot interface{}) ([]structMeta, error) {
 				// add structure to parsing stack
 				if _, found := validStructs[fld.Type()]; !found {
 					prefix, _ := fType.Tag.Lookup(TagEnvPrefix)
-					cfgStack = append(cfgStack, cfgNode{fld.Addr().Interface(), sPrefix + prefix})
+					cfgStack = append(cfgStack, cfgNode{
+						Val:    fld.Addr().Interface(),
+						Prefix: sPrefix + prefix,
+						Path:   append(cfgStack[i].Path, fType.Name),
+					})
 					continue
 				}
 
@@ -392,6 +398,7 @@ func readStructMetadata(cfgRoot interface{}) ([]structMeta, error) {
 				description: fType.Tag.Get(TagEnvDescription),
 				updatable:   upd,
 				required:    required,
+				path:        cfgStack[i].Path,
 			})
 		}
 
@@ -408,7 +415,7 @@ func readEnvVars(cfg interface{}, update bool) error {
 	}
 
 	if updater, ok := cfg.(Updater); ok {
-		if err := updater.Update(); err != nil {
+		if err = updater.Update(); err != nil {
 			return err
 		}
 	}
@@ -434,7 +441,7 @@ func readEnvVars(cfg interface{}, update bool) error {
 		}
 
 		if rawValue == nil && meta.required && meta.isFieldValueZero() {
-			return newRequireError(meta.fieldName, envName)
+			return newRequireError(meta.fieldName, meta.path, envName)
 		}
 
 		if rawValue == nil && meta.isFieldValueZero() {
@@ -445,8 +452,8 @@ func readEnvVars(cfg interface{}, update bool) error {
 			continue
 		}
 
-		if err := parseValue(meta.fieldValue, *rawValue, meta.separator, meta.layout); err != nil {
-			return newParsingError(meta.fieldName, envName, err)
+		if err = parseValue(meta.fieldValue, *rawValue, meta.separator, meta.layout); err != nil {
+			return newParsingError(meta.fieldName, meta.path, envName, err)
 		}
 	}
 
