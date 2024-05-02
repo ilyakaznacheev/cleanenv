@@ -2,6 +2,7 @@ package cleanenv
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -318,6 +319,77 @@ func TestReadEnvVars(t *testing.T) {
 			}
 			if !reflect.DeepEqual(tt.cfg, tt.want) {
 				t.Errorf("wrong data %v, want %v", tt.cfg, tt.want)
+			}
+		})
+	}
+}
+
+func TestReadEnvErrors(t *testing.T) {
+	type testEnvErrors struct {
+		Queue struct {
+			Host string `env:"HOST"`
+		} `env-prefix:"TEST_ERRORS_"`
+		Database struct {
+			Host string        `env:"HOST" env-required:"true"`
+			TTL  time.Duration `env:"TTL"`
+		} `env-prefix:"TEST_ERRORS_DATABASE_"`
+	}
+
+	tests := []struct {
+		name      string
+		env       map[string]string
+		cfg       interface{}
+		errorAs   interface{}
+		errorWant interface{}
+	}{
+		{
+			name:    "required error",
+			env:     nil,
+			cfg:     &testEnvErrors{},
+			errorAs: RequireError{},
+			errorWant: RequireError{
+				FieldName: "Host",
+				EnvName:   "TEST_ERRORS_DATABASE_HOST",
+			},
+		},
+		{
+			name: "parsing error",
+			env: map[string]string{
+				"TEST_ERRORS_DATABASE_HOST": "localhost",
+				"TEST_ERRORS_DATABASE_TTL":  "bad-value",
+			},
+			cfg:     &testEnvErrors{},
+			errorAs: ParsingError{},
+			errorWant: ParsingError{
+				Err:       fmt.Errorf("time: invalid duration \"bad-value\""),
+				FieldName: "TTL",
+				EnvName:   "TEST_ERRORS_DATABASE_TTL",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			for env, val := range tt.env {
+				os.Setenv(env, val)
+			}
+			defer os.Clearenv()
+
+			err := readEnvVars(tt.cfg, false)
+			if err == nil {
+				t.Errorf("wrong behavior %v, want error", err)
+			}
+
+			if !errors.As(err, &tt.errorAs) {
+				t.Errorf("wrong error as %T, want %T", tt.errorAs, err)
+			}
+
+			if tt.errorWant != nil && !reflect.DeepEqual(tt.errorAs, tt.errorWant) {
+				// not using error interface for printing value
+				bytes1, _ := json.Marshal(tt.errorAs)
+				bytes2, _ := json.Marshal(tt.errorWant)
+
+				t.Errorf("wrong error data %s, want %s", bytes1, bytes2)
 			}
 		})
 	}

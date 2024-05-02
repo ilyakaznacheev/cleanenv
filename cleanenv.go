@@ -428,11 +428,13 @@ func readEnvVars(cfg interface{}, update bool) error {
 			}
 		}
 
+		var envName string
+		if len(meta.envList) > 0 {
+			envName = meta.envList[0]
+		}
+
 		if rawValue == nil && meta.required && meta.isFieldValueZero() {
-			return fmt.Errorf(
-				"field %q is required but the value is not provided",
-				meta.fieldName,
-			)
+			return newRequireError(meta.fieldName, envName)
 		}
 
 		if rawValue == nil && meta.isFieldValueZero() {
@@ -443,13 +445,8 @@ func readEnvVars(cfg interface{}, update bool) error {
 			continue
 		}
 
-		var envName string
-		if len(meta.envList) > 0 {
-			envName = meta.envList[0]
-		}
-
 		if err := parseValue(meta.fieldValue, *rawValue, meta.separator, meta.layout); err != nil {
-			return fmt.Errorf("parsing field %v env %v: %v", meta.fieldName, envName, err)
+			return newParsingError(meta.fieldName, envName, err)
 		}
 	}
 
