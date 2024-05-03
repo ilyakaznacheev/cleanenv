@@ -325,7 +325,11 @@ func TestReadEnvVars(t *testing.T) {
 }
 
 func TestReadEnvErrors(t *testing.T) {
-	type testEnvErrors struct {
+	type testOneLevel struct {
+		Host string `env:"HOST" env-required:"true"`
+	}
+
+	type testTwoLevels struct {
 		Queue struct {
 			Host string `env:"HOST"`
 		} `env-prefix:"TEST_ERRORS_"`
@@ -338,6 +342,14 @@ func TestReadEnvErrors(t *testing.T) {
 		} `env-prefix:"TEST_ERRORS_THIRD_"`
 	}
 
+	type testThreeLevels struct {
+		Database struct {
+			URL struct {
+				Host string `env:"HOST" env-required:"true"`
+			}
+		}
+	}
+
 	tests := []struct {
 		name      string
 		env       map[string]string
@@ -346,9 +358,31 @@ func TestReadEnvErrors(t *testing.T) {
 		errorWant interface{}
 	}{
 		{
-			name:    "required error",
+			name:    "required error - one level",
 			env:     nil,
-			cfg:     &testEnvErrors{},
+			cfg:     &testOneLevel{},
+			errorAs: RequireError{},
+			errorWant: RequireError{
+				FieldPath: "",
+				FieldName: "Host",
+				EnvName:   "HOST",
+			},
+		},
+		{
+			name:    "required error - three levels",
+			env:     nil,
+			cfg:     &testThreeLevels{},
+			errorAs: RequireError{},
+			errorWant: RequireError{
+				FieldPath: "Database.URL.",
+				FieldName: "Host",
+				EnvName:   "HOST",
+			},
+		},
+		{
+			name:    "required error - two levels",
+			env:     nil,
+			cfg:     &testTwoLevels{},
 			errorAs: RequireError{},
 			errorWant: RequireError{
 				FieldPath: "Database.",
@@ -362,7 +396,7 @@ func TestReadEnvErrors(t *testing.T) {
 				"TEST_ERRORS_DATABASE_HOST": "localhost",
 				"TEST_ERRORS_DATABASE_TTL":  "bad-value",
 			},
-			cfg:     &testEnvErrors{},
+			cfg:     &testTwoLevels{},
 			errorAs: ParsingError{},
 			errorWant: ParsingError{
 				Err:       fmt.Errorf("time: invalid duration \"bad-value\""),
