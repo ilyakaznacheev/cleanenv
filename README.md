@@ -8,7 +8,7 @@ Minimalistic configuration reader
 [![GoDoc](https://godoc.org/github.com/ilyakaznacheev/cleanenv?status.svg)](https://godoc.org/github.com/ilyakaznacheev/cleanenv)
 [![Go Report Card](https://goreportcard.com/badge/github.com/ilyakaznacheev/cleanenv)](https://goreportcard.com/report/github.com/ilyakaznacheev/cleanenv)
 [![Coverage Status](https://codecov.io/github/ilyakaznacheev/cleanenv/coverage.svg?branch=master)](https://codecov.io/gh/ilyakaznacheev/cleanenv)
-[![Build Status](https://travis-ci.org/ilyakaznacheev/cleanenv.svg?branch=master)](https://travis-ci.org/ilyakaznacheev/cleanenv)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/ilyakaznacheev/cleanenv/test.yml)](https://github.com/ilyakaznacheev/cleanenv/actions)
 [![Release](https://img.shields.io/github/release/ilyakaznacheev/cleanenv.svg)](https://github.com/ilyakaznacheev/cleanenv/releases/)
 [![License](https://img.shields.io/github/license/ilyakaznacheev/cleanenv.svg)](https://github.com/ilyakaznacheev/cleanenv/blob/master/LICENSE)
 
@@ -192,6 +192,8 @@ There are following supported types:
 - maps (of any other supported type);
 - `time.Duration`;
 - `time.Time` (layout by default is RFC3339, may be overridden by `env-layout`);
+- `*time.Location` (time zone parsing [depends](https://pkg.go.dev/time#LoadLocation) on running machine);
+- any type that implements `encoding.TextUnmarshaler`;
 - any type implementing `cleanenv.Setter` interface.
 
 
@@ -294,11 +296,19 @@ This code will try to read and parse the configuration file `config.yml` as the 
 
 For more details check the [example](/example) directory.
 
+## Version Support Policy
+
+We support the last 7 versions of Golang. E.g. if the current version is 1.19, we test compatibility with all versions from 1.19 to 1.13.
+
+If you use an older version of Golang in your project, please use an older library version.
+
 ## Contribution
 
 The tool is open-sourced under the [MIT](LICENSE) license.
 
-If you will find some error, want to add something or ask a question - feel free to create an issue and/or make a pull request.
+If you find some error, want to add something or ask a question - feel free to create an issue and/or make a pull request.
+
+Guidelines for contribution may be found in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Any contribution is welcome.
 

@@ -1,16 +1,17 @@
 package cleanenv
 
 import (
+	"encoding"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
 	"io/fs"
-	"math"
 	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -28,21 +29,28 @@ const (
 
 // Supported tags
 const (
-	// Name of the environment variable or a list of names
+	// TagEnv name of the environment variable or a list of names
 	TagEnv = "env"
-	// Value parsing layout (for types like time.Time)
+
+	// TagEnvLayout value parsing layout (for types like time.Time)
 	TagEnvLayout = "env-layout"
-	// Default value
+
+	// TagEnvDefault default value
 	TagEnvDefault = "env-default"
-	// Custom list and map separator
+
+	// TagEnvSeparator custom list and map separator
 	TagEnvSeparator = "env-separator"
-	// Environment variable description
+
+	// TagEnvDescription environment variable description
 	TagEnvDescription = "env-description"
-	// Flag to mark a field as updatable
+
+	// TagEnvUpd flag to mark a field as updatable
 	TagEnvUpd = "env-upd"
-	// Flag to mark a field as required
+
+	// TagEnvRequired flag to mark a field as required
 	TagEnvRequired = "env-required"
-	// Flag to specify prefix for structure fields
+
+	// TagEnvPrefix аlag to specify prefix for structure fields
 	TagEnvPrefix = "env-prefix"
 )
 
@@ -50,15 +58,15 @@ const (
 //
 // To implement a custom value setter you need to add a SetValue function to your type that will receive a string raw value:
 //
-// 	type MyField string
+//	type MyField string
 //
-// 	func (f *MyField) SetValue(s string) error {
-// 		if s == "" {
-// 			return fmt.Errorf("field value can't be empty")
-// 		}
-// 		*f = MyField("my field is: " + s)
-// 		return nil
-// 	}
+//	func (f *MyField) SetValue(s string) error {
+//		if s == "" {
+//			return fmt.Errorf("field value can't be empty")
+//		}
+//		*f = MyField("my field is: " + s)
+//		return nil
+//	}
 type Setter interface {
 	SetValue(string) error
 }
@@ -73,20 +81,20 @@ type Updater interface {
 //
 // Example:
 //
-//	 type ConfigDatabase struct {
-//	 	Port     string `yaml:"port" env:"PORT" env-default:"5432"`
-//	 	Host     string `yaml:"host" env:"HOST" env-default:"localhost"`
-//	 	Name     string `yaml:"name" env:"NAME" env-default:"postgres"`
-//	 	User     string `yaml:"user" env:"USER" env-default:"user"`
-//	 	Password string `yaml:"password" env:"PASSWORD"`
-//	 }
+//	type ConfigDatabase struct {
+//		Port     string `yaml:"port" env:"PORT" env-default:"5432"`
+//		Host     string `yaml:"host" env:"HOST" env-default:"localhost"`
+//		Name     string `yaml:"name" env:"NAME" env-default:"postgres"`
+//		User     string `yaml:"user" env:"USER" env-default:"user"`
+//		Password string `yaml:"password" env:"PASSWORD"`
+//	}
 //
-//	 var cfg ConfigDatabase
+//	var cfg ConfigDatabase
 //
-//	 err := cleanenv.ReadConfig("config.yml", &cfg)
-//	 if err != nil {
-//	     ...
-//	 }
+//	err := cleanenv.ReadConfig("config.yml", &cfg)
+//	if err != nil {
+//	    ...
+//	}
 func ReadConfig(path string, cfg interface{}) error {
 	err := parseFile(path, cfg)
 	if err != nil {
@@ -170,11 +178,11 @@ func parseReader(path string, f io.Reader, cfg interface{}) (err error) {
 	// parse the file depending on the file type
 	switch ext := strings.ToLower(filepath.Ext(path)); ext {
 	case ".yaml", ".yml":
-		err = parseYAML(f, cfg)
+		err = ParseYAML(f, cfg)
 	case ".json":
-		err = parseJSON(f, cfg)
+		err = ParseJSON(f, cfg)
 	case ".toml":
-		err = parseTOML(f, cfg)
+		err = ParseTOML(f, cfg)
 	case ".edn":
 		err = parseEDN(f, cfg)
 	case ".env":
@@ -188,19 +196,19 @@ func parseReader(path string, f io.Reader, cfg interface{}) (err error) {
 	return nil
 }
 
-// parseYAML parses YAML from reader to data structure
-func parseYAML(r io.Reader, str interface{}) error {
+// ParseYAML parses YAML from reader to data structure
+func ParseYAML(r io.Reader, str interface{}) error {
 	return yaml.NewDecoder(r).Decode(str)
 }
 
-// parseJSON parses JSON from reader to data structure
-func parseJSON(r io.Reader, str interface{}) error {
+// ParseJSON parses JSON from reader to data structure
+func ParseJSON(r io.Reader, str interface{}) error {
 	return json.NewDecoder(r).Decode(str)
 }
 
-// parseTOML parses TOML from reader to data structure
-func parseTOML(r io.Reader, str interface{}) error {
-	_, err := toml.DecodeReader(r, str)
+// ParseTOML parses TOML from reader to data structure
+func ParseTOML(r io.Reader, str interface{}) error {
+	_, err := toml.NewDecoder(r).Decode(str)
 	return err
 }
 
@@ -219,9 +227,56 @@ func parseENV(r io.Reader, _ interface{}) error {
 	}
 
 	for env, val := range vars {
-		os.Setenv(env, val)
+		if err = os.Setenv(env, val); err != nil {
+			return fmt.Errorf("set environment: %w", err)
+		}
 	}
+
 	return nil
+}
+
+// parseSlice parses value into a slice of given type
+func parseSlice(valueType reflect.Type, value string, sep string, layout *string) (*reflect.Value, error) {
+	sliceValue := reflect.MakeSlice(valueType, 0, 0)
+	if valueType.Elem().Kind() == reflect.Uint8 {
+		sliceValue = reflect.ValueOf([]byte(value))
+	} else if len(strings.TrimSpace(value)) != 0 {
+		values := strings.Split(value, sep)
+		sliceValue = reflect.MakeSlice(valueType, len(values), len(values))
+
+		for i, val := range values {
+			if err := parseValue(sliceValue.Index(i), val, sep, layout); err != nil {
+				return nil, err
+			}
+		}
+	}
+	return &sliceValue, nil
+}
+
+// parseMap parses value into a map of given type
+func parseMap(valueType reflect.Type, value string, sep string, layout *string) (*reflect.Value, error) {
+	mapValue := reflect.MakeMap(valueType)
+	if len(strings.TrimSpace(value)) != 0 {
+		pairs := strings.Split(value, sep)
+		for _, pair := range pairs {
+			kvPair := strings.SplitN(pair, ":", 2)
+			if len(kvPair) != 2 {
+				return nil, fmt.Errorf("invalid map item: %q", pair)
+			}
+			k := reflect.New(valueType.Key()).Elem()
+			err := parseValue(k, kvPair[0], sep, layout)
+			if err != nil {
+				return nil, err
+			}
+			v := reflect.New(valueType.Elem()).Elem()
+			err = parseValue(v, kvPair[1], sep, layout)
+			if err != nil {
+				return nil, err
+			}
+			mapValue.SetMapIndex(k, v)
+		}
+	}
+	return &mapValue, nil
 }
 
 // structMeta is a structure metadata entity
@@ -239,7 +294,7 @@ type structMeta struct {
 
 // isFieldValueZero determines if fieldValue empty or not
 func (sm *structMeta) isFieldValueZero() bool {
-	return isZero(sm.fieldValue)
+	return sm.fieldValue.IsZero()
 }
 
 // parseFunc custom value parser function
@@ -247,6 +302,7 @@ type parseFunc func(*reflect.Value, string, *string) error
 
 // Any specific supported struct can be added here
 var validStructs = map[reflect.Type]parseFunc{
+
 	reflect.TypeOf(time.Time{}): func(field *reflect.Value, value string, layout *string) error {
 		var l string
 		if layout != nil {
@@ -261,12 +317,23 @@ var validStructs = map[reflect.Type]parseFunc{
 		field.Set(reflect.ValueOf(val))
 		return nil
 	},
+
 	reflect.TypeOf(url.URL{}): func(field *reflect.Value, value string, _ *string) error {
 		val, err := url.Parse(value)
 		if err != nil {
 			return err
 		}
 		field.Set(reflect.ValueOf(*val))
+		return nil
+	},
+
+	reflect.TypeOf(&time.Location{}): func(field *reflect.Value, value string, _ *string) error {
+		loc, err := time.LoadLocation(value)
+		if err != nil {
+			return err
+		}
+
+		field.Set(reflect.ValueOf(loc))
 		return nil
 	},
 }
@@ -309,12 +376,17 @@ func readStructMetadata(cfgRoot interface{}) ([]structMeta, error) {
 
 			// process nested structure (except of supported ones)
 			if fld := s.Field(idx); fld.Kind() == reflect.Struct {
+				//skip unexported
+				if !fld.CanInterface() {
+					continue
+				}
 				// add structure to parsing stack
 				if _, found := validStructs[fld.Type()]; !found {
 					prefix, _ := fType.Tag.Lookup(TagEnvPrefix)
 					cfgStack = append(cfgStack, cfgNode{fld.Addr().Interface(), sPrefix + prefix})
 					continue
 				}
+
 				// process time.Time
 				if l, ok := fType.Tag.Lookup(TagEnvLayout); ok {
 					layout = &l
@@ -398,9 +470,10 @@ func readEnvVars(cfg interface{}, update bool) error {
 		}
 
 		if rawValue == nil && meta.required && meta.isFieldValueZero() {
-			err := fmt.Errorf("field %q is required but the value is not provided",
-				meta.fieldName)
-			return err
+			return fmt.Errorf(
+				"field %q is required but the value is not provided",
+				meta.fieldName,
+			)
 		}
 
 		if rawValue == nil && meta.isFieldValueZero() {
@@ -411,8 +484,13 @@ func readEnvVars(cfg interface{}, update bool) error {
 			continue
 		}
 
+		var envName string
+		if len(meta.envList) > 0 {
+			envName = meta.envList[0]
+		}
+
 		if err := parseValue(meta.fieldValue, *rawValue, meta.separator, meta.layout); err != nil {
-			return err
+			return fmt.Errorf("parsing field %v env %v: %v", meta.fieldName, envName, err)
 		}
 	}
 
@@ -424,7 +502,22 @@ func readEnvVars(cfg interface{}, update bool) error {
 func parseValue(field reflect.Value, value, sep string, layout *string) error {
 	// TODO: simplify recursion
 
+	valueType := field.Type()
+
+	// look for supported struct parser
+	// parsing of struct must be done before checking the implementation `encoding.TextUnmarshaler`
+	// standard struct types already have the implementation `encoding.TextUnmarshaler` (for example `time.Time`)
+	if structParser, found := validStructs[valueType]; found {
+		return structParser(&field, value, layout)
+	}
+
 	if field.CanInterface() {
+		if ct, ok := field.Interface().(encoding.TextUnmarshaler); ok {
+			return ct.UnmarshalText([]byte(value))
+		} else if ctp, ok := field.Addr().Interface().(encoding.TextUnmarshaler); ok {
+			return ctp.UnmarshalText([]byte(value))
+		}
+
 		if cs, ok := field.Interface().(Setter); ok {
 			return cs.SetValue(value)
 		} else if csp, ok := field.Addr().Interface().(Setter); ok {
@@ -432,9 +525,8 @@ func parseValue(field reflect.Value, value, sep string, layout *string) error {
 		}
 	}
 
-	valueType := field.Type()
-
 	switch valueType.Kind() {
+
 	// parse string value
 	case reflect.String:
 		field.SetString(value)
@@ -447,16 +539,22 @@ func parseValue(field reflect.Value, value, sep string, layout *string) error {
 		}
 		field.SetBool(b)
 
-	// parse integer (or time) value
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		if field.Kind() == reflect.Int64 && valueType.PkgPath() == "time" && valueType.Name() == "Duration" {
+	// parse integer
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32:
+		number, err := strconv.ParseInt(value, 0, valueType.Bits())
+		if err != nil {
+			return err
+		}
+		field.SetInt(number)
+
+	case reflect.Int64:
+		if valueType == reflect.TypeOf(time.Duration(0)) {
 			// try to parse time
 			d, err := time.ParseDuration(value)
 			if err != nil {
 				return err
 			}
 			field.SetInt(int64(d))
-
 		} else {
 			// parse regular integer
 			number, err := strconv.ParseInt(value, 0, valueType.Bits())
@@ -500,60 +598,11 @@ func parseValue(field reflect.Value, value, sep string, layout *string) error {
 
 		field.Set(*mapValue)
 
-	case reflect.Struct:
-		if structParser, found := validStructs[valueType]; found {
-			return structParser(&field, value, layout)
-		}
-
 	default:
 		return fmt.Errorf("unsupported type %s.%s", valueType.PkgPath(), valueType.Name())
 	}
 
 	return nil
-}
-
-// parseSlice parses value into a slice of given type
-func parseSlice(valueType reflect.Type, value string, sep string, layout *string) (*reflect.Value, error) {
-	sliceValue := reflect.MakeSlice(valueType, 0, 0)
-	if valueType.Elem().Kind() == reflect.Uint8 {
-		sliceValue = reflect.ValueOf([]byte(value))
-	} else if len(strings.TrimSpace(value)) != 0 {
-		values := strings.Split(value, sep)
-		sliceValue = reflect.MakeSlice(valueType, len(values), len(values))
-
-		for i, val := range values {
-			if err := parseValue(sliceValue.Index(i), val, sep, layout); err != nil {
-				return nil, err
-			}
-		}
-	}
-	return &sliceValue, nil
-}
-
-// parseMap parses value into a map of given type
-func parseMap(valueType reflect.Type, value string, sep string, layout *string) (*reflect.Value, error) {
-	mapValue := reflect.MakeMap(valueType)
-	if len(strings.TrimSpace(value)) != 0 {
-		pairs := strings.Split(value, sep)
-		for _, pair := range pairs {
-			kvPair := strings.SplitN(pair, ":", 2)
-			if len(kvPair) != 2 {
-				return nil, fmt.Errorf("invalid map item: %q", pair)
-			}
-			k := reflect.New(valueType.Key()).Elem()
-			err := parseValue(k, kvPair[0], sep, layout)
-			if err != nil {
-				return nil, err
-			}
-			v := reflect.New(valueType.Elem()).Elem()
-			err = parseValue(v, kvPair[1], sep, layout)
-			if err != nil {
-				return nil, err
-			}
-			mapValue.SetMapIndex(k, v)
-		}
-	}
-	return &mapValue, nil
 }
 
 // GetDescription returns a description of environment variables.
@@ -564,13 +613,15 @@ func GetDescription(cfg interface{}, headerText *string) (string, error) {
 		return "", err
 	}
 
-	var header, description string
+	var header string
 
 	if headerText != nil {
 		header = *headerText
 	} else {
 		header = "Environment variables:"
 	}
+
+	description := make([]string, 0)
 
 	for _, m := range meta {
 		if len(m.envList) == 0 {
@@ -587,14 +638,17 @@ func GetDescription(cfg interface{}, headerText *string) (string, error) {
 			if m.defValue != nil {
 				elemDescription += fmt.Sprintf(" (default %q)", *m.defValue)
 			}
-			description += elemDescription
+			description = append(description, elemDescription)
 		}
 	}
 
-	if description != "" {
-		return header + description, nil
+	if len(description) == 0 {
+		return "", nil
 	}
-	return "", nil
+
+	sort.Strings(description)
+
+	return header + strings.Join(description, ""), nil
 }
 
 // Usage returns a configuration usage help.
@@ -622,44 +676,5 @@ func FUsage(w io.Writer, cfg interface{}, headerText *string, usageFuncs ...func
 			fmt.Fprintln(w)
 		}
 		fmt.Fprintln(w, text)
-	}
-}
-
-// isZero is a backport of reflect.Value.IsZero()
-func isZero(v reflect.Value) bool {
-	switch v.Kind() {
-	case reflect.Bool:
-		return !v.Bool()
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return v.Int() == 0
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		return v.Uint() == 0
-	case reflect.Float32, reflect.Float64:
-		return math.Float64bits(v.Float()) == 0
-	case reflect.Complex64, reflect.Complex128:
-		c := v.Complex()
-		return math.Float64bits(real(c)) == 0 && math.Float64bits(imag(c)) == 0
-	case reflect.Array:
-		for i := 0; i < v.Len(); i++ {
-			if !isZero(v.Index(i)) {
-				return false
-			}
-		}
-		return true
-	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice, reflect.UnsafePointer:
-		return v.IsNil()
-	case reflect.String:
-		return v.Len() == 0
-	case reflect.Struct:
-		for i := 0; i < v.NumField(); i++ {
-			if !isZero(v.Field(i)) {
-				return false
-			}
-		}
-		return true
-	default:
-		// This should never happens, but will act as a safeguard for
-		// later, as a default value doesn't makes sense here.
-		panic(fmt.Sprintf("Value.IsZero: %v", v.Kind()))
 	}
 }
