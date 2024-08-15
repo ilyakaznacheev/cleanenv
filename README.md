@@ -151,7 +151,7 @@ type ConfigServer struct {
     Host     string `env:"HOST" env-description:"server host"`
 }
 
-var cfg ConfigRemote
+var cfg ConfigServer
 
 help, err := cleanenv.GetDescription(&cfg, nil)
 if err != nil {
