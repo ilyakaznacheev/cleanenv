@@ -25,6 +25,7 @@ This is a simple configuration reading tool. It just does the following:
 - [Installation](#installation)
 - [Usage](#usage)
     - [Read Configuration](#read-configuration)
+    - [Read Configuration From List Of Paths](#read-configuration-from-list-of-paths)
     - [Read Environment Variables Only](#read-environment-variables-only)
     - [Update Environment Variables](#update-environment-variables)
     - [Description](#description)
@@ -89,7 +90,7 @@ This will do the following:
 1. reads environment variables and overwrites values from the file with the values which was found in the environment (`env` tag);
 1. if no value was found on the first two steps, the field will be filled with the default value (`env-default` tag) if it is set.
 
-### Read Configuration From A Valid Config File Among Various Paths
+### Read Configuration From List Of Paths
 
 If you have a usecase of having different config path based on environment or whatsoever, all the paths can be configured and last valid path will be used to read the configuration.
 
