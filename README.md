@@ -89,6 +89,40 @@ This will do the following:
 1. reads environment variables and overwrites values from the file with the values which was found in the environment (`env` tag);
 1. if no value was found on the first two steps, the field will be filled with the default value (`env-default` tag) if it is set.
 
+### Read Configuration From A Valid Config File Among Various Paths
+
+If you have a usecase of having different config path based on environment or whatsoever, all the paths can be configured and last valid path will be used to read the configuration.
+
+```go
+import "github.com/ilyakaznacheev/cleanenv"
+
+type ConfigDatabase struct {
+    Port     string `yaml:"port" env:"PORT" env-default:"5432"`
+    Host     string `yaml:"host" env:"HOST" env-default:"localhost"`
+    Name     string `yaml:"name" env:"NAME" env-default:"postgres"`
+    User     string `yaml:"user" env:"USER" env-default:"user"`
+    Password string `yaml:"password" env:"PASSWORD"`
+}
+
+var cfg ConfigDatabase
+
+cleanenv.AddConfigPath("config.yml")
+cleanenv.AddConfigPath("/dev/config.yml")
+cleanenv.AddConfigPath("/prod/config.yml")
+
+err := cleanenv.Read(&cfg)
+if err != nil {
+    ...
+}
+```
+
+This will do the following:
+
+1. reads last valid path among added paths.
+2. parse configuration file according to YAML format (`yaml` tag in this case);
+3. reads environment variables and overwrites values from the file with the values which was found in the environment (`env` tag);
+4. if no value was found on the first two steps, the field will be filled with the default value (`env-default` tag) if it is set.
+
 ### Read Environment Variables Only
 
 Sometimes you don't want to use configuration files at all, or you may want to use `.env` file format instead. Thus, you can limit yourself with only reading environment variables:

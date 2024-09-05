@@ -75,6 +75,40 @@ type Updater interface {
 	Update() error
 }
 
+// paths holds user provided path.
+var paths = make([]string, 0, 4)
+
+// AddConfigPath gives ability to add miltiple paths based on environment or use cases.
+func AddConfigPath(path string) {
+	paths = append(paths, path)
+}
+
+// getValidConfigPath returns one valid path from list of paths.
+// If multiple valid paths exist, last one will be returned.
+func getValidConfigPath() (string, error) {
+	var valid string
+
+	for _, path := range paths {
+		if _, err := os.Stat(path); err == nil {
+			valid = path
+		}
+	}
+	if valid == "" {
+		return "", fmt.Errorf("%w: no valid config file found in configured path", os.ErrNotExist)
+	}
+
+	return valid, nil
+}
+
+// Read reads the config based on path set by AddConfigPaths.
+func Read(cfg interface{}) error {
+	path, err := getValidConfigPath()
+	if err != nil {
+		return err
+	}
+	return ReadConfig(path, cfg)
+}
+
 // ReadConfig reads configuration file and parses it depending on tags in structure provided.
 // Then it reads and parses
 //

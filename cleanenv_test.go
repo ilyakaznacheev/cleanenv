@@ -1497,3 +1497,416 @@ two = 2`),
 		})
 	}
 }
+
+func TestRead(t *testing.T) {
+	type config struct {
+		Number    int64  `edn:"number" yaml:"number" env:"TEST_NUMBER" env-default:"1"`
+		String    string `edn:"string" yaml:"string" env:"TEST_STRING" env-default:"default"`
+		NoDefault string `edn:"no-default" yaml:"no-default" env:"TEST_NO_DEFAULT"`
+		NoEnv     string `edn:"no-env" yaml:"no-env" env-default:"default"`
+	}
+
+	tests := []struct {
+		name    string
+		file    string
+		ext     string
+		env     map[string]string
+		want    *config
+		wantErr bool
+	}{
+		{
+			name: "edn_only",
+			file: `
+			{
+				:number 2
+				:string "test"
+				:no-default "NoDefault"
+				:no-env "this"
+			}
+`,
+			ext: "edn",
+			env: nil,
+			want: &config{
+				Number:    2,
+				String:    "test",
+				NoDefault: "NoDefault",
+				NoEnv:     "this",
+			},
+			wantErr: false,
+		},
+
+		{
+			name: "edn_and_env",
+			file: `
+			{
+				:number 2
+				:string "test"
+				:no-default "NoDefault"
+				:no-env "this"
+			}
+`,
+			ext: "edn",
+			env: map[string]string{
+				"TEST_NUMBER": "3",
+				"TEST_STRING": "fromEnv",
+			},
+			want: &config{
+				Number:    3,
+				String:    "fromEnv",
+				NoDefault: "NoDefault",
+				NoEnv:     "this",
+			},
+			wantErr: false,
+		},
+
+		{
+			name: "yaml_only",
+			file: `
+number: 2
+string: test
+no-default: NoDefault
+no-env: this
+`,
+			ext: "yaml",
+			env: nil,
+			want: &config{
+				Number:    2,
+				String:    "test",
+				NoDefault: "NoDefault",
+				NoEnv:     "this",
+			},
+			wantErr: false,
+		},
+
+		{
+			name: "env_only",
+			file: "none: none",
+			ext:  "yaml",
+			env: map[string]string{
+				"TEST_NUMBER": "2",
+				"TEST_STRING": "test",
+			},
+			want: &config{
+				Number:    2,
+				String:    "test",
+				NoDefault: "",
+				NoEnv:     "default",
+			},
+			wantErr: false,
+		},
+
+		{
+			name: "yaml_and_env",
+			file: `
+number: 2
+string: test
+no-default: NoDefault
+no-env: this
+`,
+			ext: "yaml",
+			env: map[string]string{
+				"TEST_NUMBER": "3",
+				"TEST_STRING": "fromEnv",
+			},
+			want: &config{
+				Number:    3,
+				String:    "fromEnv",
+				NoDefault: "NoDefault",
+				NoEnv:     "this",
+			},
+			wantErr: false,
+		},
+
+		{
+			name: "empty",
+			file: "none: none",
+			ext:  "yaml",
+			env:  nil,
+			want: &config{
+				Number:    1,
+				String:    "default",
+				NoDefault: "",
+				NoEnv:     "default",
+			},
+			wantErr: false,
+		},
+
+		{
+			name:    "unknown",
+			file:    "-",
+			ext:     "",
+			want:    nil,
+			wantErr: true,
+		},
+
+		{
+			name:    "parsing error",
+			file:    "-",
+			ext:     "json",
+			want:    nil,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpFile, err := ioutil.TempFile(os.TempDir(), fmt.Sprintf("*.%s", tt.ext))
+			if err != nil {
+				t.Fatal("cannot create temporary file:", err)
+			}
+			defer os.Remove(tmpFile.Name())
+
+			AddConfigPath(tmpFile.Name())
+			AddConfigPath("/test/abc.txt")
+			AddConfigPath("/prod/abc.txt")
+			AddConfigPath("/dev/abc.txt")
+			AddConfigPath("../local/abc.txt")
+
+			text := []byte(tt.file)
+			if _, err = tmpFile.Write(text); err != nil {
+				t.Fatal("failed to write to temporary file:", err)
+			}
+
+			for env, val := range tt.env {
+				os.Setenv(env, val)
+			}
+			defer os.Clearenv()
+
+			var cfg config
+			if err = Read(&cfg); (err != nil) != tt.wantErr {
+				t.Errorf("wrong error behavior %v, wantErr %v", err, tt.wantErr)
+			}
+			if err == nil && !reflect.DeepEqual(&cfg, tt.want) {
+				t.Errorf("wrong data %v, want %v", &cfg, tt.want)
+			}
+		})
+	}
+}
+
+func TestReadMultiValidConfigFile(t *testing.T) {
+	type config struct {
+		Number    int64  `edn:"number" yaml:"number" env:"TEST_NUMBER" env-default:"1"`
+		String    string `edn:"string" yaml:"string" env:"TEST_STRING" env-default:"default"`
+		NoDefault string `edn:"no-default" yaml:"no-default" env:"TEST_NO_DEFAULT"`
+		NoEnv     string `edn:"no-env" yaml:"no-env" env-default:"default"`
+	}
+
+	tests := []struct {
+		name    string
+		file1   string
+		file2   string
+		ext     string
+		env     map[string]string
+		want    *config
+		wantErr bool
+	}{
+		{
+			name: "edn_only",
+			file1: `
+			{
+				:number 1
+				:string "test1"
+				:no-default "NoDefault1"
+				:no-env "this1"
+			}
+`,
+			file2: `
+			{
+				:number 2
+				:string "test2"
+				:no-default "NoDefault2"
+				:no-env "this2"
+			}
+`,
+			ext: "edn",
+			env: nil,
+			want: &config{
+				Number:    2,
+				String:    "test2",
+				NoDefault: "NoDefault2",
+				NoEnv:     "this2",
+			},
+			wantErr: false,
+		},
+
+		{
+			name: "edn_and_env",
+			file1: `
+			{
+				:number 1
+				:string "test1"
+				:no-default "NoDefault1"
+				:no-env "this1"
+			}
+`,
+			file2: `
+			{
+				:number 2
+				:string "test2"
+				:no-default "NoDefault2"
+				:no-env "this2"
+			}
+`,
+			ext: "edn",
+			env: map[string]string{
+				"TEST_NUMBER": "3",
+				"TEST_STRING": "fromEnv",
+			},
+			want: &config{
+				Number:    3,
+				String:    "fromEnv",
+				NoDefault: "NoDefault2",
+				NoEnv:     "this2",
+			},
+			wantErr: false,
+		},
+
+		{
+			name: "yaml_only",
+			file1: `
+number: 1
+string: test1
+no-default: NoDefault1
+no-env: this1
+`,
+			file2: `
+number: 2
+string: test2
+no-default: NoDefault2
+no-env: this2
+`,
+			ext: "yaml",
+			env: nil,
+			want: &config{
+				Number:    2,
+				String:    "test2",
+				NoDefault: "NoDefault2",
+				NoEnv:     "this2",
+			},
+			wantErr: false,
+		},
+
+		{
+			name:  "env_only",
+			file1: "none: none",
+			file2: "none: none",
+			ext:   "yaml",
+			env: map[string]string{
+				"TEST_NUMBER": "2",
+				"TEST_STRING": "test2",
+			},
+			want: &config{
+				Number:    2,
+				String:    "test2",
+				NoDefault: "",
+				NoEnv:     "default",
+			},
+			wantErr: false,
+		},
+
+		{
+			name: "yaml_and_env",
+			file1: `
+number: 1
+string: test1
+no-default: NoDefault1
+no-env: this1
+`,
+			file2: `
+number: 2
+string: test2
+no-default: NoDefault2
+no-env: this2
+`,
+			ext: "yaml",
+			env: map[string]string{
+				"TEST_NUMBER": "3",
+				"TEST_STRING": "fromEnv",
+			},
+			want: &config{
+				Number:    3,
+				String:    "fromEnv",
+				NoDefault: "NoDefault2",
+				NoEnv:     "this2",
+			},
+			wantErr: false,
+		},
+
+		{
+			name:  "empty",
+			file1: "none: none",
+			file2: "none: none",
+			ext:   "yaml",
+			env:   nil,
+			want: &config{
+				Number:    1,
+				String:    "default",
+				NoDefault: "",
+				NoEnv:     "default",
+			},
+			wantErr: false,
+		},
+
+		{
+			name:    "unknown",
+			file1:   "-",
+			file2:   "-",
+			ext:     "",
+			want:    nil,
+			wantErr: true,
+		},
+
+		{
+			name:    "parsing error",
+			file1:   "-",
+			file2:   "-",
+			ext:     "json",
+			want:    nil,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpFile1, err := ioutil.TempFile(os.TempDir(), fmt.Sprintf("*.%s", tt.ext))
+			if err != nil {
+				t.Fatal("cannot create temporary file:", err)
+			}
+			defer os.Remove(tmpFile1.Name())
+			text1 := []byte(tt.file1)
+			if _, err = tmpFile1.Write(text1); err != nil {
+				t.Fatal("failed to write to temporary file:", err)
+			}
+
+			tmpFile2, err := ioutil.TempFile(os.TempDir(), fmt.Sprintf("*.%s", tt.ext))
+			if err != nil {
+				t.Fatal("cannot create temporary file:", err)
+			}
+			defer os.Remove(tmpFile2.Name())
+			text2 := []byte(tt.file2)
+			if _, err = tmpFile2.Write(text2); err != nil {
+				t.Fatal("failed to write to temporary file:", err)
+			}
+
+			AddConfigPath(tmpFile1.Name())
+			AddConfigPath("/test/abc.txt")
+			AddConfigPath("/prod/abc.txt")
+			AddConfigPath(tmpFile2.Name())
+			AddConfigPath("/dev/abc.txt")
+			AddConfigPath("../local/abc.txt")
+
+			for env, val := range tt.env {
+				os.Setenv(env, val)
+			}
+			defer os.Clearenv()
+
+			var cfg config
+			if err = Read(&cfg); (err != nil) != tt.wantErr {
+				t.Errorf("wrong error behavior %v, wantErr %v", err, tt.wantErr)
+			}
+			if err == nil && !reflect.DeepEqual(&cfg, tt.want) {
+				t.Errorf("wrong data %v, want %v", &cfg, tt.want)
+			}
+		})
+	}
+}
