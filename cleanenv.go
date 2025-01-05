@@ -49,7 +49,7 @@ const (
 	// TagEnvRequired flag to mark a field as required
 	TagEnvRequired = "env-required"
 
-	// TagEnvPrefix аlag to specify prefix for structure fields
+	// TagEnvPrefix flag to specify prefix for structure fields
 	TagEnvPrefix = "env-prefix"
 )
 
@@ -113,7 +113,7 @@ func UpdateEnv(cfg interface{}) error {
 	return readEnvVars(cfg, true)
 }
 
-// parseFile parses configuration file according to it's extension
+// parseFile parses configuration file according to its extension
 //
 // Currently following file extensions are supported:
 //
@@ -249,6 +249,7 @@ type structMeta struct {
 	description string
 	updatable   bool
 	required    bool
+	path        string
 }
 
 // isFieldValueZero determines if fieldValue empty or not
@@ -302,9 +303,10 @@ func readStructMetadata(cfgRoot interface{}) ([]structMeta, error) {
 	type cfgNode struct {
 		Val    interface{}
 		Prefix string
+		Path   string
 	}
 
-	cfgStack := []cfgNode{{cfgRoot, ""}}
+	cfgStack := []cfgNode{{cfgRoot, "", ""}}
 	metas := make([]structMeta, 0)
 
 	for i := 0; i < len(cfgStack); i++ {
@@ -342,7 +344,11 @@ func readStructMetadata(cfgRoot interface{}) ([]structMeta, error) {
 				// add structure to parsing stack
 				if _, found := validStructs[fld.Type()]; !found {
 					prefix, _ := fType.Tag.Lookup(TagEnvPrefix)
-					cfgStack = append(cfgStack, cfgNode{fld.Addr().Interface(), sPrefix + prefix})
+					cfgStack = append(cfgStack, cfgNode{
+						Val:    fld.Addr().Interface(),
+						Prefix: sPrefix + prefix,
+						Path:   fmt.Sprintf("%s%s.", cfgStack[i].Path, fType.Name),
+					})
 					continue
 				}
 
@@ -392,6 +398,7 @@ func readStructMetadata(cfgRoot interface{}) ([]structMeta, error) {
 				description: fType.Tag.Get(TagEnvDescription),
 				updatable:   upd,
 				required:    required,
+				path:        cfgStack[i].Path,
 			})
 		}
 
@@ -408,7 +415,7 @@ func readEnvVars(cfg interface{}, update bool) error {
 	}
 
 	if updater, ok := cfg.(Updater); ok {
-		if err := updater.Update(); err != nil {
+		if err = updater.Update(); err != nil {
 			return err
 		}
 	}
@@ -428,10 +435,14 @@ func readEnvVars(cfg interface{}, update bool) error {
 			}
 		}
 
+		var envName string
+		if len(meta.envList) > 0 {
+			envName = meta.envList[0]
+		}
+
 		if rawValue == nil && meta.required && meta.isFieldValueZero() {
-			return fmt.Errorf(
-				"field %q is required but the value is not provided",
-				meta.fieldName,
+			return fmt.Errorf("field %q is required but the value is not provided",
+				meta.path+meta.fieldName,
 			)
 		}
 
@@ -443,13 +454,10 @@ func readEnvVars(cfg interface{}, update bool) error {
 			continue
 		}
 
-		var envName string
-		if len(meta.envList) > 0 {
-			envName = meta.envList[0]
-		}
-
-		if err := parseValue(meta.fieldValue, *rawValue, meta.separator, meta.layout); err != nil {
-			return fmt.Errorf("parsing field %v env %v: %v", meta.fieldName, envName, err)
+		if err = parseValue(meta.fieldValue, *rawValue, meta.separator, meta.layout); err != nil {
+			return fmt.Errorf("parsing field %q env %q: %v",
+				meta.path+meta.fieldName, envName, err,
+			)
 		}
 	}
 

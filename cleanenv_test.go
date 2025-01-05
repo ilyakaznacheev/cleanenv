@@ -323,6 +323,87 @@ func TestReadEnvVars(t *testing.T) {
 	}
 }
 
+func TestReadEnvErrors(t *testing.T) {
+	type testOneLevel struct {
+		Host string `env:"HOST" env-required:"true"`
+	}
+
+	type testTwoLevels struct {
+		Queue struct {
+			Host string `env:"HOST"`
+		} `env-prefix:"TEST_ERRORS_"`
+		Database struct {
+			Host string        `env:"HOST" env-required:"true"`
+			TTL  time.Duration `env:"TTL"`
+		} `env-prefix:"TEST_ERRORS_DATABASE_"`
+		ThirdStruct struct {
+			Host string `env:"HOST"`
+		} `env-prefix:"TEST_ERRORS_THIRD_"`
+	}
+
+	type testThreeLevels struct {
+		Database struct {
+			URL struct {
+				Host string `env:"HOST" env-required:"true"`
+			}
+		}
+	}
+
+	tests := []struct {
+		name          string
+		env           map[string]string
+		cfg           interface{}
+		expectedError string
+	}{
+		{
+			name:          "required error - one level",
+			env:           nil,
+			cfg:           &testOneLevel{},
+			expectedError: `field "Host" is required but the value is not provided`,
+		},
+		{
+			name:          "required error - two levels",
+			env:           nil,
+			cfg:           &testTwoLevels{},
+			expectedError: `field "Database.Host" is required but the value is not provided`,
+		},
+		{
+			name:          "required error - three levels",
+			env:           nil,
+			cfg:           &testThreeLevels{},
+			expectedError: `field "Database.URL.Host" is required but the value is not provided`,
+		},
+		{
+			name: "parsing error",
+			env: map[string]string{
+				"TEST_ERRORS_DATABASE_HOST": "localhost",
+				"TEST_ERRORS_DATABASE_TTL":  "bad-value",
+			},
+			cfg:           &testTwoLevels{},
+			expectedError: `parsing field "Database.TTL" env "TEST_ERRORS_DATABASE_TTL": time: invalid duration "bad-value"`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			for env, val := range tt.env {
+				os.Setenv(env, val)
+			}
+			defer os.Clearenv()
+
+			err := readEnvVars(tt.cfg, false)
+
+			if err == nil {
+				t.Fatalf("expected error but got nil")
+			}
+
+			if err.Error() != tt.expectedError {
+				t.Errorf("unexpected error message: got %q, want %q", err.Error(), tt.expectedError)
+			}
+		})
+	}
+}
+
 func TestReadEnvVarsURL(t *testing.T) {
 	urlFunc := func(u string) url.URL {
 		parsed, err := url.Parse(u)
