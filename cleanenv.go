@@ -49,7 +49,7 @@ const (
 	// TagEnvRequired flag to mark a field as required
 	TagEnvRequired = "env-required"
 
-	// TagEnvPrefix аlag to specify prefix for structure fields
+	// TagEnvPrefix flag to specify prefix for structure fields
 	TagEnvPrefix = "env-prefix"
 )
 
@@ -113,7 +113,7 @@ func UpdateEnv(cfg interface{}) error {
 	return readEnvVars(cfg, true)
 }
 
-// parseFile parses configuration file according to it's extension
+// parseFile parses configuration file according to its extension
 //
 // Currently following file extensions are supported:
 //
@@ -441,7 +441,9 @@ func readEnvVars(cfg interface{}, update bool) error {
 		}
 
 		if rawValue == nil && meta.required && meta.isFieldValueZero() {
-			return newRequireError(meta.fieldName, meta.path, envName)
+			return fmt.Errorf("field %q is required but the value is not provided",
+				meta.path+meta.fieldName,
+			)
 		}
 
 		if rawValue == nil && meta.isFieldValueZero() {
@@ -453,7 +455,9 @@ func readEnvVars(cfg interface{}, update bool) error {
 		}
 
 		if err = parseValue(meta.fieldValue, *rawValue, meta.separator, meta.layout); err != nil {
-			return newParsingError(meta.fieldName, meta.path, envName, err)
+			return fmt.Errorf("parsing field %q env %q: %v",
+				meta.path+meta.fieldName, envName, err,
+			)
 		}
 	}
 

@@ -2,7 +2,6 @@ package cleanenv
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -351,44 +350,28 @@ func TestReadEnvErrors(t *testing.T) {
 	}
 
 	tests := []struct {
-		name      string
-		env       map[string]string
-		cfg       interface{}
-		errorAs   interface{}
-		errorWant interface{}
+		name          string
+		env           map[string]string
+		cfg           interface{}
+		expectedError string
 	}{
 		{
-			name:    "required error - one level",
-			env:     nil,
-			cfg:     &testOneLevel{},
-			errorAs: RequireError{},
-			errorWant: RequireError{
-				FieldPath: "",
-				FieldName: "Host",
-				EnvName:   "HOST",
-			},
+			name:          "required error - one level",
+			env:           nil,
+			cfg:           &testOneLevel{},
+			expectedError: `field "Host" is required but the value is not provided`,
 		},
 		{
-			name:    "required error - three levels",
-			env:     nil,
-			cfg:     &testThreeLevels{},
-			errorAs: RequireError{},
-			errorWant: RequireError{
-				FieldPath: "Database.URL.",
-				FieldName: "Host",
-				EnvName:   "HOST",
-			},
+			name:          "required error - two levels",
+			env:           nil,
+			cfg:           &testTwoLevels{},
+			expectedError: `field "Database.Host" is required but the value is not provided`,
 		},
 		{
-			name:    "required error - two levels",
-			env:     nil,
-			cfg:     &testTwoLevels{},
-			errorAs: RequireError{},
-			errorWant: RequireError{
-				FieldPath: "Database.",
-				FieldName: "Host",
-				EnvName:   "TEST_ERRORS_DATABASE_HOST",
-			},
+			name:          "required error - three levels",
+			env:           nil,
+			cfg:           &testThreeLevels{},
+			expectedError: `field "Database.URL.Host" is required but the value is not provided`,
 		},
 		{
 			name: "parsing error",
@@ -396,14 +379,8 @@ func TestReadEnvErrors(t *testing.T) {
 				"TEST_ERRORS_DATABASE_HOST": "localhost",
 				"TEST_ERRORS_DATABASE_TTL":  "bad-value",
 			},
-			cfg:     &testTwoLevels{},
-			errorAs: ParsingError{},
-			errorWant: ParsingError{
-				Err:       fmt.Errorf("time: invalid duration \"bad-value\""),
-				FieldName: "TTL",
-				FieldPath: "Database.",
-				EnvName:   "TEST_ERRORS_DATABASE_TTL",
-			},
+			cfg:           &testTwoLevels{},
+			expectedError: `parsing field "Database.TTL" env "TEST_ERRORS_DATABASE_TTL": time: invalid duration "bad-value"`,
 		},
 	}
 
@@ -415,20 +392,13 @@ func TestReadEnvErrors(t *testing.T) {
 			defer os.Clearenv()
 
 			err := readEnvVars(tt.cfg, false)
+
 			if err == nil {
-				t.Errorf("wrong behavior %v, want error", err)
+				t.Fatalf("expected error but got nil")
 			}
 
-			if !errors.As(err, &tt.errorAs) {
-				t.Errorf("wrong error as %T, want %T", tt.errorAs, err)
-			}
-
-			if tt.errorWant != nil && !reflect.DeepEqual(tt.errorAs, tt.errorWant) {
-				// not using error interface for printing value
-				bytes1, _ := json.Marshal(tt.errorAs)
-				bytes2, _ := json.Marshal(tt.errorWant)
-
-				t.Errorf("wrong error data %s, want %s", bytes1, bytes2)
+			if err.Error() != tt.expectedError {
+				t.Errorf("unexpected error message: got %q, want %q", err.Error(), tt.expectedError)
 			}
 		})
 	}
