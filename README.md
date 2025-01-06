@@ -25,6 +25,7 @@ This is a simple configuration reading tool. It just does the following:
 - [Installation](#installation)
 - [Usage](#usage)
     - [Read Configuration](#read-configuration)
+    - [Read Configuration From List Of Paths](#read-configuration-from-list-of-paths)
     - [Read Environment Variables Only](#read-environment-variables-only)
     - [Update Environment Variables](#update-environment-variables)
     - [Description](#description)
@@ -88,6 +89,40 @@ This will do the following:
 1. parse configuration file according to YAML format (`yaml` tag in this case);
 1. reads environment variables and overwrites values from the file with the values which was found in the environment (`env` tag);
 1. if no value was found on the first two steps, the field will be filled with the default value (`env-default` tag) if it is set.
+
+### Read Configuration From List Of Paths
+
+If you have a usecase of having different config path based on environment or whatsoever, all the paths can be configured and last valid path will be used to read the configuration.
+
+```go
+import "github.com/ilyakaznacheev/cleanenv"
+
+type ConfigDatabase struct {
+    Port     string `yaml:"port" env:"PORT" env-default:"5432"`
+    Host     string `yaml:"host" env:"HOST" env-default:"localhost"`
+    Name     string `yaml:"name" env:"NAME" env-default:"postgres"`
+    User     string `yaml:"user" env:"USER" env-default:"user"`
+    Password string `yaml:"password" env:"PASSWORD"`
+}
+
+var cfg ConfigDatabase
+
+cleanenv.AddConfigPath("config.yml")
+cleanenv.AddConfigPath("/dev/config.yml")
+cleanenv.AddConfigPath("/prod/config.yml")
+
+err := cleanenv.Read(&cfg)
+if err != nil {
+    ...
+}
+```
+
+This will do the following:
+
+1. reads last valid path among added paths.
+2. parse configuration file according to YAML format (`yaml` tag in this case);
+3. reads environment variables and overwrites values from the file with the values which was found in the environment (`env` tag);
+4. if no value was found on the first two steps, the field will be filled with the default value (`env-default` tag) if it is set.
 
 ### Read Environment Variables Only
 
