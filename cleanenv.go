@@ -95,22 +95,17 @@ type Updater interface {
 //	    ...
 //	}
 func ReadConfig(path string, cfg interface{}) error {
-	err := parseFile(path, cfg)
-	if err != nil {
-		return err
-	}
-
-	return readEnvVars(cfg, false)
+	return parseFile(path, cfg)
 }
 
 // ReadEnv reads environment variables into the structure.
 func ReadEnv(cfg interface{}) error {
-	return readEnvVars(cfg, false)
+	return readEnvVars(cfg, parseOsEnvs(cfg), false)
 }
 
 // UpdateEnv rereads (updates) environment variables in the structure.
 func UpdateEnv(cfg interface{}) error {
-	return readEnvVars(cfg, true)
+	return readEnvVars(cfg, parseOsEnvs(cfg), true)
 }
 
 // parseFile parses configuration file according to its extension
@@ -157,41 +152,50 @@ func parseFile(path string, cfg interface{}) error {
 
 // ParseYAML parses YAML from reader to data structure
 func ParseYAML(r io.Reader, str interface{}) error {
-	return yaml.NewDecoder(r).Decode(str)
+	err := yaml.NewDecoder(r).Decode(str)
+	if err != nil {
+		return err
+	}
+	return setDefaults(str)
 }
 
 // ParseJSON parses JSON from reader to data structure
 func ParseJSON(r io.Reader, str interface{}) error {
-	return json.NewDecoder(r).Decode(str)
+	err := json.NewDecoder(r).Decode(str)
+	if err != nil {
+		return err
+	}
+	return setDefaults(str)
 }
 
 // ParseTOML parses TOML from reader to data structure
 func ParseTOML(r io.Reader, str interface{}) error {
 	_, err := toml.NewDecoder(r).Decode(str)
-	return err
+	if err != nil {
+		return err
+	}
+	return setDefaults(str)
 }
 
 // parseEDN parses EDN from reader to data structure
 func parseEDN(r io.Reader, str interface{}) error {
-	return edn.NewDecoder(r).Decode(str)
+	err := edn.NewDecoder(r).Decode(str)
+	if err != nil {
+		return err
+	}
+	return setDefaults(str)
 }
 
 // parseENV, in fact, doesn't fill the structure with environment variable values.
 // It just parses ENV file and sets all variables to the environment.
 // Thus, the structure should be filled at the next steps.
-func parseENV(r io.Reader, _ interface{}) error {
+func parseENV(r io.Reader, cfg interface{}) error {
 	vars, err := godotenv.Parse(r)
 	if err != nil {
 		return err
 	}
 
-	for env, val := range vars {
-		if err = os.Setenv(env, val); err != nil {
-			return fmt.Errorf("set environment: %w", err)
-		}
-	}
-
-	return nil
+	return readEnvVars(cfg, vars, false)
 }
 
 // parseSlice parses value into a slice of given type
@@ -407,8 +411,58 @@ func readStructMetadata(cfgRoot interface{}) ([]structMeta, error) {
 	return metas, nil
 }
 
+// parseOsEnvs parses environment variables into map
+func parseOsEnvs(cfg interface{}) (envs map[string]string) {
+	envs = make(map[string]string)
+	metaInfo, err := readStructMetadata(cfg)
+	if err != nil {
+		return
+	}
+
+	for _, meta := range metaInfo {
+		for _, env := range meta.envList {
+			if value, ok := os.LookupEnv(env); ok {
+				envs[env] = value
+				break
+			}
+		}
+	}
+
+	return
+}
+
+func setDefaults(cfg interface{}) error {
+	metaInfo, err := readStructMetadata(cfg)
+	if err != nil {
+		return err
+	}
+
+	if updater, ok := cfg.(Updater); ok {
+		if err := updater.Update(); err != nil {
+			return err
+		}
+	}
+
+	for _, meta := range metaInfo {
+		if meta.required && meta.isFieldValueZero() {
+			return fmt.Errorf(
+				"field %q is required but the value is not provided",
+				meta.fieldName,
+			)
+		}
+
+		if meta.isFieldValueZero() && meta.defValue != nil {
+			if err := parseValue(meta.fieldValue, *meta.defValue, meta.separator, meta.layout); err != nil {
+				return fmt.Errorf("parsing default value for field %v: %v", meta.fieldName, err)
+			}
+		}
+	}
+
+	return nil
+}
+
 // readEnvVars reads environment variables to the provided configuration structure
-func readEnvVars(cfg interface{}, update bool) error {
+func readEnvVars(cfg interface{}, envs map[string]string, update bool) error {
 	metaInfo, err := readStructMetadata(cfg)
 	if err != nil {
 		return err
@@ -429,7 +483,7 @@ func readEnvVars(cfg interface{}, update bool) error {
 		var rawValue *string
 
 		for _, env := range meta.envList {
-			if value, ok := os.LookupEnv(env); ok {
+			if value, ok := envs[env]; ok {
 				rawValue = &value
 				break
 			}

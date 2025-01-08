@@ -313,7 +313,7 @@ func TestReadEnvVars(t *testing.T) {
 			}
 			defer os.Clearenv()
 
-			if err := readEnvVars(tt.cfg, false); (err != nil) != tt.wantErr {
+			if err := readEnvVars(tt.cfg, parseOsEnvs(tt.cfg), false); (err != nil) != tt.wantErr {
 				t.Errorf("wrong error behavior %v, wantErr %v", err, tt.wantErr)
 			}
 			if !reflect.DeepEqual(tt.cfg, tt.want) {
@@ -455,7 +455,7 @@ func TestReadEnvVarsURL(t *testing.T) {
 			}
 			defer os.Clearenv()
 
-			if err := readEnvVars(tt.cfg, false); (err != nil) != tt.wantErr {
+			if err := readEnvVars(tt.cfg, parseOsEnvs(tt.cfg), false); (err != nil) != tt.wantErr {
 				t.Errorf("wrong error behavior %v, wantErr %v", err, tt.wantErr)
 			}
 			if !reflect.DeepEqual(tt.cfg, tt.want) {
@@ -506,7 +506,7 @@ func TestReadEnvVarsTime(t *testing.T) {
 			}
 			defer os.Clearenv()
 
-			if err := readEnvVars(tt.cfg, false); (err != nil) != tt.wantErr {
+			if err := readEnvVars(tt.cfg, parseOsEnvs(tt.cfg), false); (err != nil) != tt.wantErr {
 				t.Errorf("wrong error behavior %v, wantErr %v", err, tt.wantErr)
 			}
 			if !reflect.DeepEqual(tt.cfg, tt.want) {
@@ -548,7 +548,7 @@ func TestReadEnvVarsWithPrefix(t *testing.T) {
 	}
 
 	var cfg Config
-	if err := readEnvVars(&cfg, false); err != nil {
+	if err := readEnvVars(&cfg, parseOsEnvs(&cfg), false); err != nil {
 		t.Fatal("failed to read env vars", err)
 	}
 
@@ -635,7 +635,7 @@ func TestReadUpdateFunctions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := readEnvVars(tt.cfg, false); (err != nil) != tt.wantErr {
+			if err := readEnvVars(tt.cfg, parseOsEnvs(tt.cfg), false); (err != nil) != tt.wantErr {
 				t.Errorf("wrong error behavior %v, wantErr %v", err, tt.wantErr)
 			}
 			if !reflect.DeepEqual(tt.cfg, tt.want) {
@@ -774,7 +774,11 @@ two = 2`,
 }
 
 func TestParseFileEnv(t *testing.T) {
-	type dummy struct{}
+	type dummy struct {
+		Test1 string `env:"TEST1"`
+		Test2 string `env:"TEST2"`
+		Test3 string `env:"TEST3"`
+	}
 
 	tests := []struct {
 		name    string
@@ -838,8 +842,15 @@ func TestParseFileEnv(t *testing.T) {
 			if err = parseFile(tmpFile.Name(), &cfg); (err != nil) != tt.wantErr {
 				t.Errorf("wrong error behavior %v, wantErr %v", err, tt.wantErr)
 			}
+
+			vals := map[string]string{
+				"TEST1": cfg.Test1,
+				"TEST2": cfg.Test2,
+				"TEST3": cfg.Test3,
+			}
+
 			for key, val := range tt.has {
-				if envVal := os.Getenv(key); err == nil && val != envVal {
+				if envVal := vals[key]; err == nil && val != envVal {
 					t.Errorf("wrong value %s of var %s, want %s", envVal, key, val)
 				}
 			}
@@ -1231,8 +1242,8 @@ func TestReadConfig(t *testing.T) {
 				"TEST_STRING": "fromEnv",
 			},
 			want: &config{
-				Number:    3,
-				String:    "fromEnv",
+				Number:    2,
+				String:    "test",
 				NoDefault: "NoDefault",
 				NoEnv:     "this",
 			},
@@ -1267,8 +1278,8 @@ no-env: this
 				"TEST_STRING": "test",
 			},
 			want: &config{
-				Number:    2,
-				String:    "test",
+				Number:    1,
+				String:    "default",
 				NoDefault: "",
 				NoEnv:     "default",
 			},
@@ -1289,8 +1300,8 @@ no-env: this
 				"TEST_STRING": "fromEnv",
 			},
 			want: &config{
-				Number:    3,
-				String:    "fromEnv",
+				Number:    2,
+				String:    "test",
 				NoDefault: "NoDefault",
 				NoEnv:     "this",
 			},
