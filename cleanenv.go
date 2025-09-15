@@ -475,6 +475,16 @@ func parseValue(field reflect.Value, value, sep string, layout *string) error {
 
 	valueType := field.Type()
 
+	// Init struct for pointer
+	if valueType.Kind() == reflect.Ptr && field.IsNil() {
+		field.Set(reflect.New(valueType.Elem())) // Create the object
+	}
+
+	// Update the field if pointer
+	if field.Kind() == reflect.Ptr {
+		field = field.Elem()
+	}
+
 	// look for supported struct parser
 	// parsing of struct must be done before checking the implementation `encoding.TextUnmarshaler`
 	// standard struct types already have the implementation `encoding.TextUnmarshaler` (for example `time.Time`)
