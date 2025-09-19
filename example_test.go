@@ -9,6 +9,26 @@ import (
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
+// ExamplePrintDescription prints a description text from structure tags
+func ExamplePrintDescription() {
+	type config struct {
+		One   int64   `env:"ONE" env-description:"first parameter" env-required:"true"`
+		Two   float64 `env:"TWO" env-description:"second parameter"`
+		Three string  `env:"THREE" env-description:"third parameter"`
+	}
+
+	var cfg config
+
+	cleanenv.PrintDescription(&cfg)
+	//Output: The following environment variables can be used for configuration:
+	//
+	// KEY      TYPE       DEFAULT    REQUIRED    DESCRIPTION
+	// ONE      int64                 true        first parameter
+	// TWO      float64                           second parameter
+	// THREE    string                            third parameter
+
+}
+
 // ExampleGetDescription builds a description text from structure tags
 func ExampleGetDescription() {
 	type config struct {
