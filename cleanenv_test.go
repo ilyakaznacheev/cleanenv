@@ -886,6 +886,11 @@ func TestGetDescription(t *testing.T) {
 		Three int
 	}
 
+	type testRequired struct {
+		Required string `env:"REQUIRED" env-required:"true" env-description:"a required field"`
+		Optional string `env:"OPTIONAL" env-description:"an optional field"`
+	}
+
 	header := "test header:"
 
 	tests := []struct {
@@ -957,7 +962,15 @@ func TestGetDescription(t *testing.T) {
 				"\n  TWO int\n    \ttwo",
 			wantErr: false,
 		},
-
+		{
+			name:   "required",
+			cfg:    &testRequired{},
+			header: nil,
+			want: "Environment variables:" +
+				"\n  OPTIONAL string\n    \tan optional field" +
+				"\n *REQUIRED string\n    \ta required field",
+			wantErr: false,
+		},
 		{
 			name:    "error",
 			cfg:     123,
