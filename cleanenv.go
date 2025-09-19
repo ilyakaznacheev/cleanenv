@@ -335,8 +335,16 @@ func readStructMetadata(cfgRoot interface{}) ([]structMeta, error) {
 				separator string
 			)
 
+			// read struct field info
+			fld := s.Field(idx)
+
+			// unwrap struct pointer
+			if fld.Kind() == reflect.Ptr {
+				fld = fld.Elem()
+			}
+
 			// process nested structure (except of supported ones)
-			if fld := s.Field(idx); fld.Kind() == reflect.Struct {
+			if fld.Kind() == reflect.Struct {
 				//skip unexported
 				if !fld.CanInterface() {
 					continue
