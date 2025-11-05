@@ -22,6 +22,88 @@ func (t *testUpdater) Update() error {
 	return t.err
 }
 
+func TestReadEnvVarsFrom(t *testing.T) {
+	lookup := func(key string) (string, bool) {
+		env := map[string]string{
+			"TEST_INTEGER":    "-5",
+			"TEST_UNSINTEGER": "5",
+			"TEST_FLOAT":      "5.5",
+			"TEST_BOOLEAN":    "true",
+			"TEST_STRING":     "test",
+			"TEST_DURATION":   "1h5m10s",
+			"TEST_TIME":       "2012-04-23T18:25:43.511Z",
+			// Location depends on the system, so we test it with time.UTC
+			"TEST_LOCATION":        "UTC",
+			"TEST_ARRAYINT":        "1,2,3",
+			"TEST_ARRAYSTRING":     "a,b,c",
+			"TEST_MAPSTRINGINT":    "a:1,b:2,c:3",
+			"TEST_MAPSTRINGSTRING": "a:x,b:y,c:z",
+		}
+		v, ok := env[key]
+		return v, ok
+	}
+	durationFunc := func(s string) time.Duration {
+		d, err := time.ParseDuration(s)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return d
+	}
+
+	timeFunc := func(s, l string) time.Time {
+		tm, err := time.Parse(l, s)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return tm
+	}
+	type AllTypes struct {
+		Integer    int64         `env:"TEST_INTEGER"`
+		UnsInteger uint64        `env:"TEST_UNSINTEGER"`
+		Float      float64       `env:"TEST_FLOAT"`
+		Boolean    bool          `env:"TEST_BOOLEAN"`
+		String     string        `env:"TEST_STRING"`
+		Duration   time.Duration `env:"TEST_DURATION"`
+		Time       time.Time     `env:"TEST_TIME"`
+		// Location depends on the system, so we test it with time.UTC
+		Location        *time.Location    `env:"TEST_LOCATION"`
+		ArrayInt        []int             `env:"TEST_ARRAYINT"`
+		ArrayString     []string          `env:"TEST_ARRAYSTRING"`
+		MapStringInt    map[string]int    `env:"TEST_MAPSTRINGINT"`
+		MapStringString map[string]string `env:"TEST_MAPSTRINGSTRING"`
+	}
+	want := AllTypes{
+		Integer:     -5,
+		UnsInteger:  5,
+		Float:       5.5,
+		Boolean:     true,
+		String:      "test",
+		Duration:    durationFunc("1h5m10s"),
+		Time:        timeFunc("2012-04-23T18:25:43.511Z", time.RFC3339),
+		Location:    time.UTC,
+		ArrayInt:    []int{1, 2, 3},
+		ArrayString: []string{"a", "b", "c"},
+		MapStringInt: map[string]int{
+			"a": 1,
+			"b": 2,
+			"c": 3,
+		},
+		MapStringString: map[string]string{
+			"a": "x",
+			"b": "y",
+			"c": "z",
+		},
+	}
+	var res AllTypes
+	err := ReadEnvFrom(&res, lookup)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(want, res) {
+		t.Errorf("wrong data %v, want %v", res, want)
+	}
+}
+
 func TestReadEnvVars(t *testing.T) {
 	durationFunc := func(s string) time.Duration {
 		d, err := time.ParseDuration(s)
@@ -313,7 +395,7 @@ func TestReadEnvVars(t *testing.T) {
 			}
 			defer os.Clearenv()
 
-			if err := readEnvVars(tt.cfg, false); (err != nil) != tt.wantErr {
+			if err := readEnvVars(tt.cfg, false, os.LookupEnv); (err != nil) != tt.wantErr {
 				t.Errorf("wrong error behavior %v, wantErr %v", err, tt.wantErr)
 			}
 			if !reflect.DeepEqual(tt.cfg, tt.want) {
@@ -391,7 +473,7 @@ func TestReadEnvErrors(t *testing.T) {
 			}
 			defer os.Clearenv()
 
-			err := readEnvVars(tt.cfg, false)
+			err := readEnvVars(tt.cfg, false, os.LookupEnv)
 
 			if err == nil {
 				t.Fatalf("expected error but got nil")
@@ -455,7 +537,7 @@ func TestReadEnvVarsURL(t *testing.T) {
 			}
 			defer os.Clearenv()
 
-			if err := readEnvVars(tt.cfg, false); (err != nil) != tt.wantErr {
+			if err := readEnvVars(tt.cfg, false, os.LookupEnv); (err != nil) != tt.wantErr {
 				t.Errorf("wrong error behavior %v, wantErr %v", err, tt.wantErr)
 			}
 			if !reflect.DeepEqual(tt.cfg, tt.want) {
@@ -506,7 +588,7 @@ func TestReadEnvVarsTime(t *testing.T) {
 			}
 			defer os.Clearenv()
 
-			if err := readEnvVars(tt.cfg, false); (err != nil) != tt.wantErr {
+			if err := readEnvVars(tt.cfg, false, os.LookupEnv); (err != nil) != tt.wantErr {
 				t.Errorf("wrong error behavior %v, wantErr %v", err, tt.wantErr)
 			}
 			if !reflect.DeepEqual(tt.cfg, tt.want) {
@@ -515,6 +597,7 @@ func TestReadEnvVarsTime(t *testing.T) {
 		})
 	}
 }
+
 func TestReadEnvVarsWithPrefix(t *testing.T) {
 	type Logging struct {
 		Debug bool `env:"DEBUG"`
@@ -532,7 +615,7 @@ func TestReadEnvVarsWithPrefix(t *testing.T) {
 		Extra    DBConfig `env-prefix:"EXTRA_"`
 	}
 
-	var env = map[string]string{
+	env := map[string]string{
 		"DB_HOST":           "db1.host",
 		"DB_PORT":           "10000",
 		"DB_DEBUG":          "true",
@@ -548,11 +631,11 @@ func TestReadEnvVarsWithPrefix(t *testing.T) {
 	}
 
 	var cfg Config
-	if err := readEnvVars(&cfg, false); err != nil {
+	if err := readEnvVars(&cfg, false, os.LookupEnv); err != nil {
 		t.Fatal("failed to read env vars", err)
 	}
 
-	var expected = Config{
+	expected := Config{
 		Default: DBConfig{
 			Host:    "db1.host",
 			Port:    10000,
@@ -595,7 +678,6 @@ type testConfigUpdateNoFunction struct {
 }
 
 func TestReadUpdateFunctions(t *testing.T) {
-
 	tests := []struct {
 		name    string
 		cfg     interface{}
@@ -635,7 +717,7 @@ func TestReadUpdateFunctions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := readEnvVars(tt.cfg, false); (err != nil) != tt.wantErr {
+			if err := readEnvVars(tt.cfg, false, os.LookupEnv); (err != nil) != tt.wantErr {
 				t.Errorf("wrong error behavior %v, wantErr %v", err, tt.wantErr)
 			}
 			if !reflect.DeepEqual(tt.cfg, tt.want) {
@@ -1387,6 +1469,7 @@ func (v *StructSetter) SetValue(s string) error {
 	v.Value = s
 	return nil
 }
+
 func TestStructSetter(t *testing.T) {
 	want := StructSetter{
 		Value: "bar",

@@ -100,17 +100,30 @@ func ReadConfig(path string, cfg interface{}) error {
 		return err
 	}
 
-	return readEnvVars(cfg, false)
+	return readEnvVars(cfg, false, os.LookupEnv)
+}
+
+// Lookup function that lookup env vars (like os.LookupEnv)
+type Lookup func(string) (string, bool)
+
+// ReadEnvFrom reads environment variables via lookup into the structure.
+func ReadEnvFrom(cfg interface{}, lookup Lookup) error {
+	return readEnvVars(cfg, false, lookup)
 }
 
 // ReadEnv reads environment variables into the structure.
 func ReadEnv(cfg interface{}) error {
-	return readEnvVars(cfg, false)
+	return ReadEnvFrom(cfg, os.LookupEnv)
+}
+
+// UpdateEnvFrom rereads (updates) environment variables in the structure via lookup function.
+func UpdateEnvFrom(cfg interface{}, lookup Lookup) error {
+	return readEnvVars(cfg, true, lookup)
 }
 
 // UpdateEnv rereads (updates) environment variables in the structure.
 func UpdateEnv(cfg interface{}) error {
-	return readEnvVars(cfg, true)
+	return UpdateEnvFrom(cfg, os.LookupEnv)
 }
 
 // parseFile parses configuration file according to its extension
@@ -262,7 +275,6 @@ type parseFunc func(*reflect.Value, string, *string) error
 
 // Any specific supported struct can be added here
 var validStructs = map[reflect.Type]parseFunc{
-
 	reflect.TypeOf(time.Time{}): func(field *reflect.Value, value string, layout *string) error {
 		var l string
 		if layout != nil {
@@ -337,7 +349,7 @@ func readStructMetadata(cfgRoot interface{}) ([]structMeta, error) {
 
 			// process nested structure (except of supported ones)
 			if fld := s.Field(idx); fld.Kind() == reflect.Struct {
-				//skip unexported
+				// skip unexported
 				if !fld.CanInterface() {
 					continue
 				}
@@ -412,7 +424,7 @@ func readStructMetadata(cfgRoot interface{}) ([]structMeta, error) {
 }
 
 // readEnvVars reads environment variables to the provided configuration structure
-func readEnvVars(cfg interface{}, update bool) error {
+func readEnvVars(cfg interface{}, update bool, lookup Lookup) error {
 	metaInfo, err := readStructMetadata(cfg)
 	if err != nil {
 		return err
@@ -433,7 +445,7 @@ func readEnvVars(cfg interface{}, update bool) error {
 		var rawValue *string
 
 		for _, env := range meta.envList {
-			if value, ok := os.LookupEnv(env); ok {
+			if value, ok := lookup(env); ok {
 				rawValue = &value
 				break
 			}
