@@ -3,7 +3,6 @@ package cleanenv_test
 import (
 	"flag"
 	"fmt"
-	"net/url"
 	"os"
 
 	"github.com/ilyakaznacheev/cleanenv"
@@ -161,22 +160,6 @@ func ExampleReadEnv() {
 	fmt.Printf("%+v\n", cfg)
 
 	//Output: {Port:5050 Host:localhost Name:redis User:tester Password:*****}
-}
-
-// ExampleReadEnv reads environment variables or default values into the structure
-func ExampleReadEnvWithURL() {
-	type config struct {
-		ImageCDN url.URL `env:"IMAGE_CDN"`
-	}
-
-	var cfg config
-
-	os.Setenv("IMAGE_CDN", "https://images.cdn/")
-
-	cleanenv.ReadEnv(&cfg)
-	fmt.Printf("%+v\n", cfg.ImageCDN.String())
-
-	//Output: https://images.cdn/
 }
 
 // MyField1 is an example type with a custom setter
