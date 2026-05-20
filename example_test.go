@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"time"
 
 	"github.com/ilyakaznacheev/cleanenv"
 )
@@ -161,6 +162,82 @@ func ExampleReadEnv() {
 	fmt.Printf("%+v\n", cfg)
 
 	//Output: {Port:5050 Host:localhost Name:redis User:tester Password:*****}
+}
+
+// ExampleReadEnv_required shows the env-required tag returning an error
+// when a required environment variable is not set.
+func ExampleReadEnv_required() {
+	type config struct {
+		Host string `env:"HOST" env-required:"true"`
+	}
+
+	var cfg config
+
+	os.Unsetenv("HOST")
+
+	err := cleanenv.ReadEnv(&cfg)
+	fmt.Println(err)
+
+	//Output: field "Host" is required but the value is not provided
+}
+
+// ExampleReadEnv_separator shows the env-separator tag overriding the default
+// list separator when parsing a slice from a single environment variable.
+func ExampleReadEnv_separator() {
+	type config struct {
+		Hosts []string `env:"HOSTS" env-separator:"|"`
+	}
+
+	var cfg config
+
+	os.Setenv("HOSTS", "a.example|b.example|c.example")
+
+	cleanenv.ReadEnv(&cfg)
+	fmt.Printf("%+v\n", cfg)
+
+	//Output: {Hosts:[a.example b.example c.example]}
+}
+
+// ExampleReadEnv_layout shows the env-layout tag controlling how a time.Time
+// value is parsed from an environment variable.
+func ExampleReadEnv_layout() {
+	type config struct {
+		Start time.Time `env:"START" env-layout:"Mon Jan _2 15:04:05 2006"`
+	}
+
+	var cfg config
+
+	os.Setenv("START", "Mon Mar 10 11:11:11 2011")
+
+	cleanenv.ReadEnv(&cfg)
+	fmt.Println(cfg.Start.UTC().Format(time.RFC3339))
+
+	//Output: 2011-03-10T11:11:11Z
+}
+
+// ExampleReadEnv_prefix shows the env-prefix tag prepending a prefix to every
+// environment variable name resolved inside a nested structure.
+func ExampleReadEnv_prefix() {
+	type db struct {
+		Host string `env:"HOST"`
+		Port string `env:"PORT"`
+	}
+	type config struct {
+		Primary db `env-prefix:"PRIMARY_"`
+		Replica db `env-prefix:"REPLICA_"`
+	}
+
+	var cfg config
+
+	os.Setenv("PRIMARY_HOST", "primary.local")
+	os.Setenv("PRIMARY_PORT", "5432")
+	os.Setenv("REPLICA_HOST", "replica.local")
+	os.Setenv("REPLICA_PORT", "5433")
+
+	cleanenv.ReadEnv(&cfg)
+	fmt.Printf("%+v\n", cfg)
+
+	//Output: {Primary:{Host:primary.local Port:5432} Replica:{Host:replica.local Port:5433}}
 }
 
 // ExampleReadEnv reads environment variables or default values into the structure
