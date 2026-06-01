@@ -455,6 +455,22 @@ func readEnvVars(cfg interface{}, update bool) error {
 		}
 
 		if rawValue == nil {
+			// If the field implements Setter and has a non-zero value (e.g. from
+			// a config file), call SetValue with the current value so that custom
+			// setter functions are applied even when no env var is set.
+			if !meta.isFieldValueZero() {
+				if cs, ok := meta.fieldValue.Interface().(Setter); ok {
+					if err = cs.SetValue(fmt.Sprintf("%v", meta.fieldValue.Interface())); err != nil {
+						return fmt.Errorf("setting field %q: %v", meta.path+meta.fieldName, err)
+					}
+				} else if meta.fieldValue.CanAddr() {
+					if csp, ok := meta.fieldValue.Addr().Interface().(Setter); ok {
+						if err = csp.SetValue(fmt.Sprintf("%v", meta.fieldValue.Interface())); err != nil {
+							return fmt.Errorf("setting field %q: %v", meta.path+meta.fieldName, err)
+						}
+					}
+				}
+			}
 			continue
 		}
 
