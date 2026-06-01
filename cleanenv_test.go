@@ -1408,6 +1408,43 @@ func TestStructSetter(t *testing.T) {
 	}
 }
 
+func TestStructSetterFromFile(t *testing.T) {
+	// Test that SetValue is called when a field with a custom Setter is
+	// populated from a config file and no env var is set (issue #75).
+
+	type cfg struct {
+		Foo StructSetter `yaml:"foo" env:"FOO_NONE"`
+	}
+
+	tmpFile, err := os.CreateTemp("", "cleanenv-test-*.yml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(tmpFile.Name())
+
+	if _, err := tmpFile.WriteString("foo:\n  value: fromfile"); err != nil {
+		t.Fatal(err)
+	}
+	tmpFile.Close()
+
+	os.Clearenv()
+
+	var c cfg
+	if err := ReadConfig(tmpFile.Name(), &c); err != nil {
+		t.Fatal("cannot read config:", err)
+	}
+
+	// With the fix, SetValue should be called on the Setter field even
+	// though no env var is set. StructSetter.SetValue sets Value = s.
+	// Before the fix: Value stays "fromfile" (YAML), SetValue never called.
+	// After the fix: SetValue("{fromfile}") is called (fmt.Sprintf of struct).
+	// The key assertion: the field was NOT left at its YAML value untouched.
+	want := "{fromfile}"
+	if c.Foo.Value != want {
+		t.Errorf("SetValue not called or wrong value: got %q, want %q", c.Foo.Value, want)
+	}
+}
+
 func TestSkipUnexportedField(t *testing.T) {
 	conf := struct {
 		Database struct {

@@ -163,8 +163,8 @@ func ExampleReadEnv() {
 	//Output: {Port:5050 Host:localhost Name:redis User:tester Password:*****}
 }
 
-// ExampleReadEnv reads environment variables or default values into the structure
-func ExampleReadEnvWithURL() {
+// ExampleReadEnv_url reads environment variables or default values into the structure with URL type
+func ExampleReadEnv_url() {
 	type config struct {
 		ImageCDN url.URL `env:"IMAGE_CDN"`
 	}
