@@ -478,8 +478,21 @@ func parseValue(field reflect.Value, value, sep string, layout *string) error {
 	// look for supported struct parser
 	// parsing of struct must be done before checking the implementation `encoding.TextUnmarshaler`
 	// standard struct types already have the implementation `encoding.TextUnmarshaler` (for example `time.Time`)
+	// Also covers pointer types registered in validStructs (e.g. *time.Location).
 	if structParser, found := validStructs[valueType]; found {
 		return structParser(&field, value, layout)
+	}
+
+	// Pointer fields: allocate when nil, then parse into the pointed value.
+	// This allows env overrides for *string/*int/etc after file parsing.
+	if field.Kind() == reflect.Ptr {
+		if field.IsNil() {
+			if !field.CanSet() {
+				return fmt.Errorf("cannot set nil pointer field")
+			}
+			field.Set(reflect.New(field.Type().Elem()))
+		}
+		return parseValue(field.Elem(), value, sep, layout)
 	}
 
 	if field.CanInterface() {

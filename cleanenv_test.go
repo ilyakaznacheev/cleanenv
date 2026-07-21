@@ -323,7 +323,41 @@ func TestReadEnvVars(t *testing.T) {
 	}
 }
 
+func TestReadEnvPointerFields(t *testing.T) {
+	type Config struct {
+		Foo *string `env:"FOO"`
+		Bar *int    `env:"BAR"`
+	}
+
+	// env into nil pointers
+	os.Clearenv()
+	os.Setenv("FOO", "from-env")
+	os.Setenv("BAR", "7")
+	cfg := &Config{}
+	if err := ReadEnv(cfg); err != nil {
+		t.Fatalf("ReadEnv: %v", err)
+	}
+	if cfg.Foo == nil || *cfg.Foo != "from-env" {
+		t.Fatalf("Foo = %v, want from-env", cfg.Foo)
+	}
+	if cfg.Bar == nil || *cfg.Bar != 7 {
+		t.Fatalf("Bar = %v, want 7", cfg.Bar)
+	}
+
+	// env overrides value already set (e.g. from config file)
+	pre := "from-file"
+	cfg2 := &Config{Foo: &pre}
+	os.Setenv("FOO", "override")
+	if err := ReadEnv(cfg2); err != nil {
+		t.Fatalf("ReadEnv override: %v", err)
+	}
+	if cfg2.Foo == nil || *cfg2.Foo != "override" {
+		t.Fatalf("Foo override = %v, want override", cfg2.Foo)
+	}
+}
+
 func TestReadEnvErrors(t *testing.T) {
+
 	type testOneLevel struct {
 		Host string `env:"HOST" env-required:"true"`
 	}
