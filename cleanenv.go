@@ -150,7 +150,7 @@ func parseFile(path string, cfg interface{}) error {
 		return fmt.Errorf("file format '%s' doesn't supported by the parser", ext)
 	}
 	if err != nil {
-		return fmt.Errorf("config file parsing error: %s", err.Error())
+		return fmt.Errorf("config file parsing error: %w", err)
 	}
 	return nil
 }
