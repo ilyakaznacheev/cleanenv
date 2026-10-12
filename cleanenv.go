@@ -344,9 +344,10 @@ func readStructMetadata(cfgRoot interface{}) ([]structMeta, error) {
 
 				// support wrapper types
 				_, implementsSetter := fld.Addr().Interface().(Setter)
+				_, implementsTextUnmarshaler := fld.Addr().Interface().(encoding.TextUnmarshaler)
 
 				// add structure to parsing stack if it's not valid
-				if _, found := validStructs[fld.Type()]; !found && !implementsSetter {
+				if _, found := validStructs[fld.Type()]; !found && !implementsSetter && !implementsTextUnmarshaler {
 					prefix, _ := fType.Tag.Lookup(TagEnvPrefix)
 					cfgStack = append(cfgStack, cfgNode{
 						Val:    fld.Addr().Interface(),
