@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"github.com/ilyakaznacheev/cleanenv"
+	"github.com/ghcllc/cleanenv"
 )
 
 type config struct {
